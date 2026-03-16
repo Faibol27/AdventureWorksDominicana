@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="AdventureWorksDominicana.Api/AdventureWorksDominicana.Api.csproj" />
+  <Project Path="AdventureWorksDominicana.Blazor/AdventureWorksDominicana.Blazor.csproj" />
+  <Project Path="AdventureWorksDominicana.Data/AdventureWorksDominicana.Data.csproj" />
+  <Project Path="AdventureWorksDominicana.Services/AdventureWorksDominicana.Services.csproj" />
+  <Project Path="AdventureWorksDominicana.Tests/AdventureWorksDominicana.Tests.csproj" />
+</Solution>

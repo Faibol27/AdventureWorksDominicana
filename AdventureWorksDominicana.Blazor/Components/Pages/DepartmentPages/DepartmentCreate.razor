@@ -1,23 +1,23 @@
-﻿@page "/Department/Edit/{BusinessEntityId:int}"
+﻿@page "/Department/Create"
 @rendermode InteractiveServer
 @inject DepartmentService departmentService
 
-<PageTitle>Department Edit</PageTitle>
+<PageTitle>Department Create</PageTitle>
 
 <EditForm Model="@Department" OnValidSubmit="Guardar">
-    <DataAnnotationsValidator />
+    <DataAnnotationsValidator/>
     <div class="container">
         <div class="card shadow-lg">
             @*Header*@
             <div class="card-header d-flex justify-content-center bg-info">
-                <h5 class="card-title text-light">Edici&oacute;n de Departamento</h5>
+                <h5 class="card-title text-light">Creaci&oacute;n de Departamento</h5>
             </div>
         
             <div class="card-body">
                 <div>
                     <label class="form-label">Nombre Departamento</label>
-                    <InputText class="form-control" @bind-Value="Department.Name" />
-                    <ValidationMessage For="() => Department.Name" />
+                    <InputText class="form-control" @bind-Value="Department.Name"/>
+                    <ValidationMessage For="()=> Department.Name"/>
                 </div>
                 <div>
                     <label class="form-label">Nombre del Grupo</label>
@@ -55,7 +55,7 @@
                     </div>
                     <div class="table-responsive mt-2">
                         <QuickGrid Items="Department.EmployeeDepartmentHistories.AsQueryable()" Class="table table-bordered">
-                            <PropertyColumn Property="@(e => PersonList.FirstOrDefault(e => e.BusinessEntityId == EmployeeDepartmentHistory.BusinessEntityId)!.FirstName)" Title="Empleado" Sortable="true" />
+                            <PropertyColumn Property="@(e => PersonList.FirstOrDefault(e => e.BusinessEntityId == EmployeeDepartmentHistory.BusinessEntityId)!.FirstName)" Title="Empleado" Sortable="true"/>
                             <PropertyColumn Property="@(e => ShifList.FirstOrDefault(s => s.ShiftId == EmployeeDepartmentHistory.ShiftId)!.Name)" Title="Horario" Sortable="true" />
                             <TemplateColumn Context="option" Title="Opcion">
                                 <button class="btn btn-outline-danger bi bi-trash"></button>
@@ -70,20 +70,17 @@
                     <span>Volver</span>
                 </a>
                 <button class="btn btn-outline-primary bi bi-plus-square-fill">Guardar</button>
-                <button type="button" class="btn btn-outline-danger bi bi-trash">Eliminar</button>
             </div>
         </div>
     </div>
 </EditForm>
 
 @code {
-    [Parameter]
-    public int BusinessEntityId { get; set; }
     private Department Department = new Department();
     private EmployeeDepartmentHistory EmployeeDepartmentHistory = new EmployeeDepartmentHistory();
     private List<Person> PersonList = new List<Person>();
     private List<Shift> ShifList = new List<Shift>();
     private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
 
-    private async Task Guardar() { }
+    private async Task Guardar(){}
 }

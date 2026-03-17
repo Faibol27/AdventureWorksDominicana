@@ -2,10 +2,7 @@
 using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace AdventureWorksDominicana.Services;
 

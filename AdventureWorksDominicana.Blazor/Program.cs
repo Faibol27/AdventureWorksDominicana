@@ -1,11 +1,18 @@
 using AdventureWorksDominicana.Blazor.Components;
+using AdventureWorksDominicana.Data.Context;
+using Blazored.Toast;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContextFactory<Contexto>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ConStr")));
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddBlazoredToast();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

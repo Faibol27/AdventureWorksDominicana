@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
-
 <div class="page">
+    <BlazoredToast  Position="ToastPosition.TopRight"
+                Timeout="5"
+                @rendermode="InteractiveServer"/>
     <div class="sidebar">
         <NavMenu />
     </div>

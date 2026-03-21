@@ -15,6 +15,13 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<ShipMethodService>();
+builder.Services.AddScoped<CountryRegionsService>();
+
+builder.Services.AddScoped<DepartmentService>();
+builder.Services.AddScoped<PersonService>();
+builder.Services.AddScoped<ShiftService>();
+builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddBlazorBootstrap();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

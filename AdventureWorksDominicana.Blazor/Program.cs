@@ -13,13 +13,17 @@ builder.Services.AddDbContextFactory<Contexto>(options =>
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Services
+builder.Services.AddScoped<CurrencyService>();
 builder.Services.AddScoped<CountryRegionsService>();
-
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<PersonService>();
 builder.Services.AddScoped<ShiftService>();
 builder.Services.AddScoped<EmployeeService>(); 
-    builder.Services.AddScoped<ProductCategoryService>();
+builder.Services.AddScoped<ProductCategoryService>();
+
+
+builder.Services.AddBlazoredToast();
 builder.Services.AddBlazorBootstrap();
 var app = builder.Build();
 

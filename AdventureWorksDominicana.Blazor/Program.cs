@@ -20,7 +20,8 @@ builder.Services.AddScoped<CountryRegionsService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<PersonService>();
 builder.Services.AddScoped<ShiftService>();
-builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<EmployeeService>(); 
+    builder.Services.AddScoped<ProductCategoryService>();
 builder.Services.AddBlazorBootstrap();
 var app = builder.Build();
 

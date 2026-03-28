@@ -59,6 +59,8 @@
                     <PropertyColumn Property="@(e => e.ShoppingCartItemId)" Sortable="true" Title="Cart Item Id" />
                     <PropertyColumn Property="@(e => e.ShoppingCartId)" Sortable="true" Title="Cart Id" />
                     <PropertyColumn Property="@(e => e.DateCreated)" Format="dd/MM/yyyy" Title="Fecha de creacion" Sortable="true" />
+                    <PropertyColumn Property="@(e => e.ModifiedDate)" Format="dd/MM/yyyy" Title="Fecha de modificacion" Sortable="true" />
+
                     <TemplateColumn Title="Acciones">
                         <a class="btn btn-outline-primary btn-sm" href="/ShoppingCartItem/Edit/@context.ShoppingCartItemId">
                             <i class="bi bi-pencil-square"></i>

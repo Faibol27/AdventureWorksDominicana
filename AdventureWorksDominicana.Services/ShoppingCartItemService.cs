@@ -68,8 +68,8 @@ public class ShoppingCartItemService(IDbContextFactory<Contexto> DbFactory) : IS
     public async Task<bool> Eliminar(int idCartitem)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
-        var cartItem = await Buscar(idCartitem);
 
+        var cartItem = await Buscar(idCartitem);
         if (cartItem == null) return false;
 
         contexto.ShoppingCartItems.Remove(cartItem);

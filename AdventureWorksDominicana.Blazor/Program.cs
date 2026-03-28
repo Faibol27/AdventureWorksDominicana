@@ -30,6 +30,7 @@ builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<ProductCategoryService>();
 builder.Services.AddScoped<SalesTerritoryService>();
 builder.Services.AddScoped<VendorService>();
+builder.Services.AddScoped<ProductDescriptionService>();
 
 builder.Services.AddBlazorBootstrap();
 var app = builder.Build();

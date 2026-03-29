@@ -1,12 +1,12 @@
 ﻿@page "/StateProvince/Index"
 
 @inject StateProvinceService stateProvinceService;
-
+@inject SalesTerritoryService salesTerritoryService;
 
 <div class="container">
     <div class="card shadow-lg">
-        <div class="card-header d-flex justify-content-between">
-            <h3>State Provinces</h3>
+        <div class="card-header d-flex justify-content-between justify-content-center">
+            <h4>State Provinces</h4>
             <a class="btn btn-primary bi bi-plus-square" href="/StateProvince/Create"> Crear</a>
         </div>
         <div class="card-body">
@@ -38,6 +38,8 @@
                     <select class="form-select" @bind="Filtro">
                         <option value="" disabled selected hidden>Seleccione un filtro...</option>
                         <option value="Nombre">Nombre</option>
+                        <option value="Codigo">C&oacute;digo</option>
+                        <option value="CodigoPais">C&oacute;digo Pa&iacute;s/Regi&oacute;n</option>
                     </select>
                 </div>
                 <div class="col-3">
@@ -55,20 +57,33 @@
                     <PropertyColumn Property="@(s => s.StateProvinceCode)" Sortable="true" Title="C&oacute;digo"></PropertyColumn>
                     <PropertyColumn Property="@(s => s.CountryRegionCode)" Sortable="true" Title="C&oacute;digo Pa&iacute;s/regi&oacute;n"></PropertyColumn>
                     <PropertyColumn Property="@(s => s.Name)" Sortable="true" Title="Nombre"></PropertyColumn>
-                    <PropertyColumn Property="@(s => s.TerritoryId)" Sortable="true" Title="Territorio"></PropertyColumn>
+                    <TemplateColumn Context="options" Title="Territorio">
+                        @(ListaSalesTerritory.Find(s => s.TerritoryId == options.TerritoryId).Name ?? "Not found")
+                    </TemplateColumn>
+                    <TemplateColumn class="text-center" Context="options" Title="¿Es Unico?">
+                        @if (EsUnico(options.CountryRegionCode, options.StateProvinceId))
+                        {
+                            <span class="bi bi-check-circle text-success"></span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-x-circle text-danger"></span>
+                        }
+                    </TemplateColumn>
                     <TemplateColumn Class="text-center" Context="options" Title="Acciones">
-                        <a href="/EntradasHuacales/Edit/@options.StateProvinceId" class="btn btn-outline-primary bi bi-pencil-square"></a>
+                        <a href="/StateProvince/Edit/@options.StateProvinceId" class="btn btn-outline-primary bi bi-pencil-square"></a>
                     </TemplateColumn>
                 </QuickGrid>
-                @*Pagination*@
-                <Paginator State="@pages" />
             </div>
+            @*Pagination*@
+            <Paginator State="@pages" />
         </div>
     </div>
 </div>
 
 @code {
     public List<StateProvince> ListaStateProvince { get; set; } = new List<StateProvince>();
+    public List<SalesTerritory> ListaSalesTerritory { get; set; } = new List<SalesTerritory>();
     public DateTime? FechaDesde { get; set; }
     public DateTime? FechaHasta { get; set; }
     public string Filtro { get; set; } = "";
@@ -79,6 +94,7 @@
     {
         ListaStateProvince = await stateProvinceService.GetList(s => s.StateProvinceId > 0);
         ListaStateProvince = ListaStateProvince.OrderByDescending(s => s.ModifiedDate).ToList();
+        ListaSalesTerritory = await salesTerritoryService.GetList(s => s.TerritoryId > 0);
     }
 
     public async Task Filtrar()
@@ -105,6 +121,14 @@
             {
                 criterio = criterio.And(s => s.Name.Trim().ToLower().Contains(ValorFiltro.ToLower()));
             }
+            if (Filtro == "Codigo")
+            {
+                criterio = criterio.And(s => s.StateProvinceCode.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
+            if (Filtro == "CodigoPais")
+            {
+                criterio = criterio.And(s => s.CountryRegionCode.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
         }
         ListaStateProvince = await stateProvinceService.GetList(criterio);
         ListaStateProvince = ListaStateProvince.OrderByDescending(s => s.ModifiedDate).ToList();
@@ -117,5 +141,10 @@
         Filtro = "";
         ValorFiltro = "";
         await Filtrar();
+    }
+
+    public bool EsUnico(string codigoPais, int id)
+    {
+        return !ListaStateProvince.Any(s => s.CountryRegionCode.ToUpper().Equals(codigoPais) && s.StateProvinceId != id);
     }
 }

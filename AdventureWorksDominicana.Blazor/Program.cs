@@ -9,18 +9,14 @@ using AdventureWorksDominicana.Blazor.Components.Account;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==========================================
-// 1. CONTEXTOS DE BASE DE DATOS
-// ==========================================
+
 builder.Services.AddDbContextFactory<Contexto>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConStr")));
 
 builder.Services.AddDbContext<SecurityContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConStr")));
 
-// ==========================================
-// 2. BLAZOR E IDENTITY (CORREGIDO SIN DUPLICADOS)
-// ==========================================
+
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddScoped<IdentityRevalidatingAuthenticationStateProvider>();
@@ -92,9 +88,7 @@ builder.Services.AddScoped<LocationService>();
 
 var app = builder.Build();
 
-// ==========================================
-// 4. PIPELINE HTTP
-// ==========================================
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

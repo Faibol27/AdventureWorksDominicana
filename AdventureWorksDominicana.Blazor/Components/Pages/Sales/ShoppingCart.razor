@@ -1,5 +1,7 @@
 ﻿@page "/ShoppingCart"
+
 @rendermode InteractiveServer
+
 @inject ShoppingCartItemService shoppingCartItemService
 @inject SalesOrderHeaderService salesOrderHeaderService
 @inject AddressService addressService
@@ -9,7 +11,10 @@
 @inject ShipMethodService shipMethodService
 @inject NavigationManager navigationManager
 @inject ToastService toastService
+@inject AuthenticationStateProvider authenticationStateProvider;
+
 <PageTitle>ShoppingCart</PageTitle>
+
 <div class="">
     <div class="shopping-container">
         @*Header*@
@@ -142,9 +147,25 @@
     private int territoryId, addressId, customerId, creditCardId, shipMethodId;
     private bool showModal = false;
 
+    private ClaimsPrincipal? User { get; set; }
+    private bool IsAuthenticated { get; set; }
+    private string? UserEmail { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        ShoppingCartItemList = await shoppingCartItemService.GetList(s => true);
+        // Busca el usuario logeado
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        User = authState.User;
+        IsAuthenticated = User.Identity?.IsAuthenticated ?? false;
+        
+        if (IsAuthenticated)
+        {
+            UserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+        }
+
+        // Solo trae los items del usuario logeado
+        ShoppingCartItemList = await shoppingCartItemService.GetList(s => s.ShoppingCartId.Trim().ToLower().Equals(UserEmail));
+        
         AddressesList = await addressService.GetList(s => true);
         CustomersList = await customerService.GetList(s => true);
         SalesTerritoriesList = await salesTerritoryService.GetList(s => true);
@@ -238,9 +259,8 @@
         showModal = false;
     }
 
-    private async Task RefreshShoppingCart()
-    {
-        ShoppingCartItemList = await shoppingCartItemService.GetList(s => true);
+    private async Task RefreshShoppingCart(){
+        ShoppingCartItemList = await shoppingCartItemService.GetList(s => s.ShoppingCartId.Trim().ToLower().Equals(UserEmail));
         GetBalance();
     }
 

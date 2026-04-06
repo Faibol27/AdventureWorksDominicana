@@ -1,22 +1,59 @@
-﻿.order-header {
-    padding: 5px 30px;
+﻿.order-card {
+    
 }
-.order-header-logo h4{
-    font-size: 4vw;
+
+    .order-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+
+/* Header */
+.order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
 }
-.card-body{
-    display:flex;
-    flex-direction:column;
-    justify-content:left;
-    gap:20px;
-    padding: 5px 30px;
+
+.order-date {
+    font-size: 0.9rem;
+    color: white;
 }
-.order-card {
-    border: 1px solid #4cff00;
-    border-radius: 10px;
-    padding:30px;
-    width: 60%;
+
+/* Status */
+.order-status {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
 }
-.header-card{
-    display:flex;
+
+.status-processing {
+    background-color: #ffc107;
+    color: black;
+}
+
+.status-cancelled {
+    background-color: #dc3545;
+}
+
+/* Body */
+.order-body {
+    display: flex;
+    justify-content: space-between;
+}
+
+.order-id {
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.order-total {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Footer */
+.order-actions {
+    margin-top: 15px;
 }

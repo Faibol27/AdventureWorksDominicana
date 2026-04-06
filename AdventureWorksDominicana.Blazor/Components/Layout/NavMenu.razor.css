@@ -64,6 +64,10 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-list-nested' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M16 .5a.5.5 0 0 0-.598-.49L10.5.99 5.598.01a.5.5 0 0 0-.196 0l-5 1A.5.5 0 0 0 0 1.5v14a.5.5 0 0 0 .598.49l4.902-.98 4.902.98a.5.5 0 0 0 .196 0l5-1A.5.5 0 0 0 16 14.5zM5 14.09V1.11l.5-.1.5.1v12.98l-.402-.08a.5.5 0 0 0-.196 0zm5 .8V1.91l.402.08a.5.5 0 0 0 .196 0L11 1.91v12.98l-.5.1z'/%3E%3C/svg%3E");
 }
 
+.bi-people-nav-menu {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-people-fill' viewBox='0 0 16 16'%3E%3Cpath d='M13 7c0-1.105-.672-2-1.5-2S10 5.895 10 7s.672 2 1.5 2S13 8.105 13 7zM6.5 7A1.5 1.5 0 1 0 6.5 4a1.5 1.5 0 0 0 0 3zM7 9c-2.337 0-4 1.12-4 2.5V13h8v-1.5C11 10.12 9.337 9 7 9zM13.5 9c.828 0 1.5.895 1.5 2v1.5h-3V11c0-1.38.663-2 1.5-2z'/%3E%3C/svg%3E");
+}
+
 .nav-item {
     font-size: 0.9rem;
     padding-bottom: 0.5rem;

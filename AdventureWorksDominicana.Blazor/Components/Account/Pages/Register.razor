@@ -52,7 +52,7 @@
                 
                 @if (identityErrors?.Any() == true)
                 {
-                    <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger, #EF4444); color: var(--danger, #EF4444); padding: 12px; border-radius: var(--radius-sm, 6px); margin-bottom: 20px; font-size: 0.85rem;">
+                    <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85rem;">
                         <ul style="margin: 0; padding-left: 20px;">
                             @foreach (var error in identityErrors)
                             {
@@ -113,8 +113,6 @@
                 <h2 class="aw-auth-title aw-title-white">¿Ya tienes cuenta?</h2>
                 <p class="aw-auth-text">Inicia sesión para continuar con tus compras y gestionar tu perfil.</p>
                 <a href="Account/Login" class="aw-btn-register">Iniciar Sesión</a>
-
-                
             </div>
             <div class="aw-circle-deco"></div>
         </div>
@@ -128,23 +126,17 @@
     private string RedirectUrl = "/";
 
     [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = default!;
+    private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    protected override void OnInitialized()
-    {
-        Input ??= new();
-    }
-
-    public async Task RegisterUser(EditContext editContext)
+    public async Task RegisterUser()
     {
         identityErrors = null;
         mostrarExito = false;
 
         var user = CreateUser();
-        user.Id = Guid.NewGuid().ToString();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -158,44 +150,65 @@
             return;
         }
 
-        Logger.LogInformation("User created a new account with password.");
+        Logger.LogInformation("Usuario creado exitosamente.");
 
-        var roleResult = await UserManager.AddToRoleAsync(user, "Customer");
+        // 1. Asignar Rol Customer
+        await UserManager.AddToRoleAsync(user, "Customer");
 
-        if (!roleResult.Succeeded)
-        {
-            Logger.LogWarning("El usuario se creo, pero fallo la asignacion del rol 'Customer'.");
-        }
-
+        // 2. Crear perfiles en tablas de AdventureWorks (BusinessEntity, Person, etc.)
         try
         {
             var nuevaEntidad = new BusinessEntity { Rowguid = Guid.NewGuid(), ModifiedDate = DateTime.Now };
             DbContext.BusinessEntities.Add(nuevaEntidad);
             await DbContext.SaveChangesAsync();
 
-            var nuevaPersona = new Person { BusinessEntityId = nuevaEntidad.BusinessEntityId, PersonType = "IN", FirstName = Input.FirstName, LastName = Input.LastName, NameStyle = false, EmailPromotion = 0, Rowguid = Guid.NewGuid(), ModifiedDate = DateTime.Now };
+            var nuevaPersona = new Person
+            {
+                BusinessEntityId = nuevaEntidad.BusinessEntityId,
+                PersonType = "IN",
+                FirstName = Input.FirstName,
+                LastName = Input.LastName,
+                ModifiedDate = DateTime.Now,
+                Rowguid = Guid.NewGuid()
+            };
             DbContext.People.Add(nuevaPersona);
             
-            var nuevoEmail = new EmailAddress { BusinessEntityId = nuevaEntidad.BusinessEntityId, EmailAddress1 = Input.Email, Rowguid = Guid.NewGuid(), ModifiedDate = DateTime.Now };
+            var nuevoEmail = new EmailAddress
+            {
+                BusinessEntityId = nuevaEntidad.BusinessEntityId,
+                EmailAddress1 = Input.Email,
+                Rowguid = Guid.NewGuid(),
+                ModifiedDate = DateTime.Now
+            };
             DbContext.EmailAddresses.Add(nuevoEmail);
 
-            var nuevoCustomer = new Customer { PersonId = nuevaEntidad.BusinessEntityId, AccountNumber = $"AW{nuevaEntidad.BusinessEntityId:D8}", Rowguid = Guid.NewGuid(), ModifiedDate = DateTime.Now };
+            var nuevoCustomer = new Customer
+            {
+                PersonId = nuevaEntidad.BusinessEntityId,
+                AccountNumber = $"AW{nuevaEntidad.BusinessEntityId:D8}",
+                Rowguid = Guid.NewGuid(),
+                ModifiedDate = DateTime.Now
+            };
             DbContext.Customers.Add(nuevoCustomer);
+            
             await DbContext.SaveChangesAsync();
-        
-            Logger.LogInformation("Usuario registrado como Entity, Person, Email y Customer.");
         }
         catch (Exception ex)
         {
             Logger.LogError($"Error al crear el perfil de negocio: {ex.Message}");
         }
 
+
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    
+        
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, $"Tu código de verificación es: {code}");
+   
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -215,21 +228,34 @@
     private AspNetUser CreateUser()
     {
         try { return Activator.CreateInstance<AspNetUser>(); }
-        catch { throw new InvalidOperationException($"Can't create an instance of '{nameof(AspNetUser)}'."); }
+        catch { throw new InvalidOperationException($"No se pudo crear una instancia de '{nameof(AspNetUser)}'."); }
     }
 
     private IUserEmailStore<AspNetUser> GetEmailStore()
     {
-        if (!UserManager.SupportsUserEmail) { throw new NotSupportedException("The default UI requires a user store with email support."); }
+        if (!UserManager.SupportsUserEmail) { throw new NotSupportedException("El UI requiere un store con soporte de email."); }
         return (IUserEmailStore<AspNetUser>)UserStore;
     }
 
     private sealed class InputModel
     {
-        [Required(ErrorMessage = "El nombre es obligatorio")] public string FirstName { get; set; } = "";
-        [Required(ErrorMessage = "El apellido es obligatorio")] public string LastName { get; set; } = "";
-        [Required(ErrorMessage = "El email es obligatorio")][EmailAddress] public string Email { get; set; } = "";
-        [Required][StringLength(100, ErrorMessage = "Mínimo 6 caracteres.", MinimumLength = 6)][DataType(DataType.Password)] public string Password { get; set; } = "";
-        [DataType(DataType.Password)][Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")] public string ConfirmPassword { get; set; } = "";
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string FirstName { get; set; } = "";
+        
+        [Required(ErrorMessage = "El apellido es obligatorio")]
+        public string LastName { get; set; } = "";
+        
+        [Required(ErrorMessage = "El email es obligatorio")]
+        [EmailAddress(ErrorMessage = "Formato de correo inválido")]
+        public string Email { get; set; } = "";
+        
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [StringLength(100, ErrorMessage = "Mínimo 6 caracteres.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+        
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
+        public string ConfirmPassword { get; set; } = "";
     }
 }

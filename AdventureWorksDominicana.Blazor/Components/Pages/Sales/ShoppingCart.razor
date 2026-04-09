@@ -242,8 +242,8 @@
         var item = ShoppingCartItemList.FirstOrDefault(x => x.ShoppingCartItemId == itemId);
         if (item != null)
         {
-            if (item.Product.ProductInventories.FirstOrDefault().Quantity >= item.Quantity + 1)
-            {
+            if (item.Product?.ProductInventories?.FirstOrDefault()?.Quantity >= item.Quantity + 1)
+            { 
                 item.Quantity += 1;
                 await shoppingCartItemService.Guardar(item);
                 GetBalance();
@@ -304,7 +304,7 @@
             SalesOrderNumber = $"SO{DateTime.Now:yyyyMMddHHmmss}{Random.Shared.Next(1000, 9999)}",
             PurchaseOrderNumber = $"PO{DateTime.Now:yyyyMMddHHmmss}{Random.Shared.Next(1000, 9999)}",
             AccountNumber = null,
-            CustomerId = userCurrent[0].CustomerId,
+            CustomerId = userCurrent.First().CustomerId,
             SalesPersonId = null,
             TerritoryId = territoryId,
             BillToAddressId = addressId,

@@ -16,7 +16,7 @@
     }
 
 .top-row {
-    min-height: 70px;
+    min-height: 3.5rem;
     padding: 0 10px !important;
     display: flex;
     align-items: center;
@@ -24,8 +24,7 @@
 }
 
 .navbar-brand {
-    height: 100%;
-    max-height: 40px;
+    height: auto;
 }
 
 .bi {

@@ -95,6 +95,8 @@ builder.Services.AddScoped<CultureService>();
 builder.Services.AddScoped<StoreService>();
 builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<TransactionHistoryService>();
+builder.Services.AddScoped<PurchaseOrderService>();
+
 
 var app = builder.Build();
 

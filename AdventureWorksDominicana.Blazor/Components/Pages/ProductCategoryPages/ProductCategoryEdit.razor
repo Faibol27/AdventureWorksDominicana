@@ -1,4 +1,4 @@
-﻿@page "/ProductCategory/Edit/{Id:int}"
+@page "/ProductCategory/Edit/{Id:int}"
 @inject NavigationManager navigationManager
 @inject ToastService toastService
 @inject ProductCategoryService categoryService
@@ -116,8 +116,6 @@ else
         categoria!.ProductSubcategories.Add(new ProductSubcategory
         {
             Name = NuevaSubcategoriaNombre,
-            ModifiedDate = DateTime.Now,
-            Rowguid = Guid.NewGuid(),
             ProductCategoryId = categoria.ProductCategoryId
         });
 
@@ -142,8 +140,6 @@ else
             return;
         }
 
-        categoria.ModifiedDate = DateTime.Now;
-
         try
         {
             if (await categoryService.Guardar(categoria))
@@ -165,10 +161,21 @@ else
     {
         if (categoria == null) return;
 
-        if (await categoryService.Eliminar(categoria.ProductCategoryId))
+        try
         {
-            toastService.ShowSuccess("Categoría eliminada");
-            navigationManager.NavigateTo("/ProductCategory/Index");
+            if (await categoryService.Eliminar(categoria.ProductCategoryId))
+            {
+                toastService.ShowSuccess("Categoría eliminada");
+                navigationManager.NavigateTo("/ProductCategory/Index");
+            }
+        }
+        catch (AdventureWorksDominicana.Services.ProductDependentDataException ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.ShowError("Error inesperado al eliminar.");
         }
         mostrarModal = false;
     }

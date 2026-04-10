@@ -1,4 +1,4 @@
-﻿using AdventureWorksDominicana.Data.Context;
+using AdventureWorksDominicana.Data.Context;
 using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +28,7 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
             .Include(p => p.ProductModel).ThenInclude(d => d.ProductModelProductDescriptionCultures).ThenInclude(c => c.Culture)
             .Include(p => p.SizeUnitMeasureCodeNavigation)
             .Include(p => p.WeightUnitMeasureCodeNavigation)
+            .Include(p => p.ProductProductPhotos).ThenInclude(ppp => ppp.ProductPhoto)
             .Where(criterio)
             .ToListAsync();
     }
@@ -59,13 +60,36 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
     public async Task<bool> Modificar(Product product)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-        product.ModifiedDate = DateTime.Now;
-        product.ProductSubcategory = null;
-        product.ProductModel = null;
-        product.SizeUnitMeasureCodeNavigation = null;
-        product.WeightUnitMeasureCodeNavigation = null;
+        
+        var productoOriginal = await contexto.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == product.ProductId);
 
-        contexto.Products.Update(product);
+        if (productoOriginal == null) return false;
+
+        product.ModifiedDate = DateTime.Now;
+
+        if (productoOriginal.ListPrice != product.ListPrice)
+        {
+            contexto.ProductListPriceHistories.Add(new ProductListPriceHistory
+            {
+                ProductId = product.ProductId,
+                StartDate = DateTime.Now,
+                ListPrice = product.ListPrice,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        if (productoOriginal.StandardCost != product.StandardCost)
+        {
+            contexto.ProductCostHistories.Add(new ProductCostHistory
+            {
+                ProductId = product.ProductId,
+                StartDate = DateTime.Now,
+                StandardCost = product.StandardCost,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        contexto.Entry(product).State = EntityState.Modified;
         return await contexto.SaveChangesAsync() > 0;
     }
 
@@ -76,6 +100,17 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
         {
             return await contexto.Products.Where(p => p.ProductId == id).ExecuteDeleteAsync() > 0;
         }
+        catch (DbUpdateException ex)
+        {
+            throw new ProductDependentDataException("No se puede eliminar el producto porque tiene dependencias activas (ej. Ventas, Inventario).", ex);
+        }
         catch { return false; }
     }
+}
+
+public class ProductDependentDataException : Exception
+{
+    public ProductDependentDataException() : base() { }
+    public ProductDependentDataException(string message) : base(message) { }
+    public ProductDependentDataException(string message, Exception innerException) : base(message, innerException) { }
 }

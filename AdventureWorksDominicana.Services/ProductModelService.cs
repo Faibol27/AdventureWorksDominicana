@@ -1,4 +1,4 @@
-﻿using AdventureWorksDominicana.Data.Context;
+using AdventureWorksDominicana.Data.Context;
 using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
@@ -11,13 +11,25 @@ public class ProductModelService(IDbContextFactory<Contexto> DbContextFactory) :
     public async Task<ProductModel?> Buscar(int id)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-        return await contexto.ProductModels.FirstOrDefaultAsync(pm => pm.ProductModelId == id);
+        return await contexto.ProductModels
+            .Include(pm => pm.ProductModelProductDescriptionCultures)
+                .ThenInclude(p => p.ProductDescription)
+            .Include(pm => pm.ProductModelProductDescriptionCultures)
+                .ThenInclude(p => p.Culture)
+            .FirstOrDefaultAsync(pm => pm.ProductModelId == id);
     }
     public async Task<bool> Eliminar(int id)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-        var filasAfectadas = await contexto.ProductModels.Where(pm => pm.ProductModelId == id).ExecuteDeleteAsync();
-        return filasAfectadas > 0;
+        try
+        {
+            return await contexto.ProductModels.Where(pm => pm.ProductModelId == id).ExecuteDeleteAsync() > 0;
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new ProductDependentDataException("No se puede eliminar el modelo porque tiene productos asociados.", ex);
+        }
+        catch { return false; }
     }
     public async Task<List<ProductModel>> GetList(Expression<Func<ProductModel, bool>> criterio)
     {
@@ -52,6 +64,23 @@ public class ProductModelService(IDbContextFactory<Contexto> DbContextFactory) :
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
         productModel.ModifiedDate = DateTime.Now;
+
+        var antiguos = await contexto.ProductModelProductDescriptionCultures
+            .Where(x => x.ProductModelId == productModel.ProductModelId).ToListAsync();
+        contexto.ProductModelProductDescriptionCultures.RemoveRange(antiguos);
+        if (productModel.ProductModelProductDescriptionCultures != null)
+        {
+            foreach (var item in productModel.ProductModelProductDescriptionCultures)
+            {
+                contexto.ProductModelProductDescriptionCultures.Add(new ProductModelProductDescriptionCulture
+                {
+                    ProductModelId = productModel.ProductModelId,
+                    ProductDescriptionId = item.ProductDescriptionId,
+                    CultureId = item.CultureId,
+                    ModifiedDate = DateTime.Now
+                });
+            }
+        }
         contexto.Entry(productModel).State = EntityState.Modified;
         return await contexto.SaveChangesAsync() > 0;
     }

@@ -1,33 +1,39 @@
-﻿@page "/ProductDescription/Edit/{ProductDescriptionId:int}"
-@rendermode InteractiveServer
-@inject ProductDescriptionService productDescriptionService
-@inject ToastService toastService
-@inject NavigationManager navigationManager
+﻿@page "/ProductDescription/Edit/{DescriptionId:int}"
 
-<PageTitle>ProductDescription Edit</PageTitle>
-<EditForm Model="@ProductDescription" OnValidSubmit="Modificar">
+@inject ProductDescriptionService productDescriptionService;
+@inject ToastService toastService;
+@inject NavigationManager navigationManager;
+@rendermode InteractiveServer
+
+<EditForm Model="ProductDesc" FormName="editarDesc" OnValidSubmit="Guardar">
     <DataAnnotationsValidator />
-    <div class="container">
+
+    <div class="container pb-5">
         <div class="card shadow-lg">
-            @*Header*@
-            <div class="card-header d-flex justify-content-center bg-info">
-                <h5 class="card-title text-light">Modificaci&oacute;n de Descripci&oacute;n de Producto</h5>
+            <div class="card-header text-center">
+                <h4>Modificar Texto Descriptivo</h4>
             </div>
-        
             <div class="card-body">
-                <div>
-                    <label class="form-label text-bg-info text-white">Descripci&oacute;n</label>
-                    <InputText class="form-control" @bind-Value="ProductDescription.Description" />
-                    <ValidationMessage For="() => ProductDescription.Description" />
+                
+                <h5 class="pb-3 text-primary border-bottom">Contenido Comercial</h5>
+                
+                <div class="mb-3">
+                    <label><strong>ID Descripción</strong></label>
+                    <input class="form-control" type="text" value="@ProductDesc.ProductDescriptionId" disabled />
                 </div>
+
+                <div class="mb-3">
+                    <label><strong>Párrafo de Descripción *</strong></label>
+                    <textarea class="form-control" rows="5" maxlength="400" @bind="ProductDesc.Description"></textarea>
+                    <ValidationMessage For="(() => ProductDesc.Description)" />
+                    <small class="text-danger">¡Atención! Cualquier cambio aquí se reflejará automáticamente en todos los Modelos vinculados.</small>
+                </div>
+
             </div>
-            <div class="card-footer d-flex justify-content-center gap-2">
-                <a href="ProductDescription/Index" class="btn btn-outline-secondary d-flex gap-1">
-                    <i class="bi bi-arrow-left"></i>
-                    <span>Volver</span>
-                </a>
-                <button class="btn btn-outline-primary bi bi-plus-square-fill">Guardar</button>
-                <button type="button" class="btn btn-outline-danger bi bi-trash" @onclick="Eliminar">Eliminar</button>
+            <div class="card-footer text-center">
+                <a class="btn btn-secondary bi bi-arrow-left" href="/ProductDescription/Index"> Volver</a>
+                <button class="btn btn-primary bi bi-floppy" type="submit"> Modificar</button>
+                <button class="btn btn-danger bi bi-trash" type="button" @onclick="Eliminar"> Eliminar</button>
             </div>
         </div>
     </div>
@@ -35,36 +41,60 @@
 
 @code {
     [Parameter]
-    public int ProductDescriptionId { get; set; }
-    private ProductDescription ProductDescription = new ProductDescription();
-    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+    public int DescriptionId { get; set; }
+
+    public ProductDescription ProductDesc { get; set; } = new ProductDescription();
 
     protected override async Task OnInitializedAsync()
     {
-        ProductDescription = await productDescriptionService.Buscar(ProductDescriptionId);
-    }
-    private async Task Modificar()
-    {
-        var existeDuplicado = await productDescriptionService.GetList(d => d.Description.ToLower().Trim() == ProductDescription.Description.ToLower().Trim() && d.ProductDescriptionId != ProductDescription.ProductDescriptionId);
-        if (existeDuplicado.Any())
+        var descEncontrado = await productDescriptionService.Buscar(DescriptionId);
+        if (descEncontrado == null)
         {
-            toastService.ShowWarning("Descripción ya existe.");
+            toastService.ShowError("No se pudo encontrar la descripción en el sistema.");
+            navigationManager.NavigateTo("/ProductDescription/Index");
             return;
         }
-        var modificado = await productDescriptionService.Guardar(ProductDescription);
-        if (modificado)
+        ProductDesc = descEncontrado;
+    }
+
+    public async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(ProductDesc.Description))
         {
-            toastService.ShowSuccess("Descripción actualizada correctamente.");
-            navigationManager.NavigateTo("ProductDescription/Index");
+            toastService.ShowWarning("La descripción no puede estar vacía.");
+            return;
+        }
+
+        bool guardado = await productDescriptionService.Guardar(ProductDesc);
+        if (guardado)
+        {
+            toastService.ShowSuccess("La descripción se ha actualizado correctamente.");
+            navigationManager.NavigateTo("/ProductDescription/Index");
+        }
+        else
+        {
+            toastService.ShowError("Ha ocurrido un error inesperado al guardar.");
         }
     }
-    private async Task Eliminar()
+
+    public async Task Eliminar()
     {
-        var eliminado = await productDescriptionService.Eliminar(ProductDescriptionId);
-        if (eliminado)
+        try
         {
-            toastService.ShowSuccess("Descripción eliminada correctamente.");
-            navigationManager.NavigateTo("ProductDescription/Index");
+            bool eliminado = await productDescriptionService.Eliminar(ProductDesc.ProductDescriptionId);
+            if (eliminado)
+            {
+                toastService.ShowSuccess("La descripción se eliminó del banco de textos.");
+                navigationManager.NavigateTo("/ProductDescription/Index");
+            }
+            else
+            {
+                toastService.ShowError("No se pudo eliminar de la base de datos.");
+            }
+        }
+        catch (Exception)
+        {
+            toastService.ShowError("No es posible eliminarla. Es probable que esté vinculada a algún Modelo.");
         }
     }
 }

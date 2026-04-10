@@ -1,4 +1,4 @@
-﻿@page "/ProductCategory/Create"
+@page "/ProductCategory/Create"
 @inject NavigationManager navigationManager
 @inject ToastService toastService
 @inject ProductCategoryService categoryService
@@ -93,9 +93,7 @@
 
         categoria.ProductSubcategories.Add(new ProductSubcategory
         {
-            Name = NuevaSubcategoriaNombre,
-            ModifiedDate = DateTime.Now,
-            Rowguid = Guid.NewGuid()
+            Name = NuevaSubcategoriaNombre
         });
 
         toastService.ShowSuccess("Detalle agregado correctamente.");
@@ -116,9 +114,6 @@
             mensaje = "Debes agregar al menos un detalle";
             return;
         }
-
-        categoria.ModifiedDate = DateTime.Now;
-        categoria.Rowguid = Guid.NewGuid();
 
         try
         {

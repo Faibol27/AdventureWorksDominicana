@@ -1,0 +1,120 @@
+﻿@page "/ProductModel/Index"
+
+@inject ProductModelService modelService;
+@rendermode InteractiveServer
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header d-flex justify-content-between">
+            <h4>Modelos de Producto</h4>
+            <a class="btn btn-primary bi bi-plus-square" href="/ProductModel/Create"> Crear</a>
+        </div>
+        <div class="card-body">
+            @* Encabezados *@
+            <div class="row">
+                <div class="col-3">
+                    <label>Desde:</label>
+                </div>
+                <div class="col-3">
+                    <label>Hasta:</label>
+                </div>
+                <div class="col-3">
+                    <label>Filtro:</label>
+                </div>
+                <div class="col-3">
+                    <label>Buscar:</label>
+                </div>
+            </div>
+
+            @* Inputs *@
+            <div class="row pb-3">
+                <div class="col-3">
+                    <input class="form-control" type="datetime-local" @bind-value="FechaDesde" />
+                </div>
+                <div class="col-3">
+                    <input class="form-control" type="datetime-local" @bind-value="FechaHasta" />
+                </div>
+                <div class="col-3">
+                    <select class="form-select" @bind="Filtro">
+                        <option value="" disabled selected hidden>Seleccione un filtro...</option>
+                        <option value="Nombre">Nombre del Modelo</option>
+                    </select>
+                </div>
+                <div class="col-3">
+                    <div class="input-group">
+                        <input class="form-control" type="text" @bind-value="ValorFiltro" placeholder="Buscar..." />
+                        <button class="btn btn-primary bi bi-search" type="button" @onclick="Filtrar"></button>
+                        <button class="btn btn-outline-primary bi bi-arrow-clockwise" type="button" @onclick="Restablecer"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <QuickGrid Class="table table-striped table-bordered table-hover" Pagination="@pages" Items="ListaModelos.AsQueryable()" ItemKey="@(m => m.ProductModelId)">
+                    <PropertyColumn Property="@(m => m.ProductModelId)" Sortable="true" Title="Id" />
+                    <PropertyColumn Property="@(m => m.Name)" Sortable="true" Title="Nombre del Modelo" />
+                    <PropertyColumn Property="@(m => m.ModifiedDate)" Sortable="true" Format="dd/MM/yyyy HH:mm" Title="Última Modificación" />
+                    
+                    <TemplateColumn Class="text-center" Context="options" Title="Acci&oacute;n">
+                        <a href="/ProductModel/Edit/@options.ProductModelId" class="btn btn-outline-primary bi bi-pencil-square"> Modificar</a>
+                    </TemplateColumn>
+                </QuickGrid>
+            </div>
+            <Paginator State="@pages" />
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<ProductModel> ListaModelos { get; set; } = new List<ProductModel>();
+    public DateTime? FechaDesde { get; set; }
+    public DateTime? FechaHasta { get; set; }
+    public string Filtro { get; set; } = "";
+    public string ValorFiltro { get; set; } = "";
+    private PaginationState pages = new PaginationState { ItemsPerPage = 10 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListaModelos = await modelService.GetList(m => m.ProductModelId > 0);
+        ListaModelos = ListaModelos.OrderByDescending(m => m.ModifiedDate).ToList();
+    }
+
+    public async Task Filtrar()
+    {
+        Expression<Func<ProductModel, bool>> criterio = m => m.ProductModelId > 0;
+
+        if (FechaDesde.HasValue && FechaHasta.HasValue)
+        {
+            DateTime fechaHastaStr = FechaHasta.Value.Date.AddDays(1).AddTicks(-1);
+            criterio = criterio.And(m => m.ModifiedDate >= FechaDesde.Value && m.ModifiedDate <= fechaHastaStr);
+        }
+        else if (FechaDesde.HasValue)
+        {
+            criterio = criterio.And(m => m.ModifiedDate >= FechaDesde.Value);
+        }
+        else if (FechaHasta.HasValue)
+        {
+            var fechaHastaStr = FechaHasta.Value.Date.AddDays(1).AddTicks(-1);
+            criterio = criterio.And(m => m.ModifiedDate <= fechaHastaStr);
+        }
+        
+        if (Filtro != "" && ValorFiltro != "")
+        {
+            if (Filtro == "Nombre")
+            {
+                criterio = criterio.And(m => m.Name.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
+        }
+        ListaModelos = await modelService.GetList(criterio);
+        ListaModelos = ListaModelos.OrderByDescending(m => m.ModifiedDate).ToList();
+    }
+
+    public async Task Restablecer()
+    {
+        FechaDesde = null;
+        FechaHasta = null;
+        Filtro = "";
+        ValorFiltro = "";
+        await Filtrar();
+    }
+}

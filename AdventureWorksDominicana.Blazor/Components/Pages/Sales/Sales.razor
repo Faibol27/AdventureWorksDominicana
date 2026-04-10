@@ -48,7 +48,7 @@
             <div class="sale-products">
                 @foreach (var p in PagedProducts)
                 {
-                    <div class="sale-product-card" @onclick="() => GoToProductDetail(p.ProductId)">
+                    <div class="sale-product-card">
                         <div class="sale-product-img">
                             <img src="https://www.svgrepo.com/show/486796/product-management.svg" alt="Product Image" />
                             <span>@p.Color</span>

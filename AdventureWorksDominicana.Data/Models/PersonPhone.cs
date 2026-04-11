@@ -26,6 +26,8 @@ public partial class PersonPhone
     /// </summary>
     [Key]
     [StringLength(25)]
+    [Required(ErrorMessage = "El teléfono es requerido.")]
+    [RegularExpression(@"^\d{3}-\d{3}-\d{4}$", ErrorMessage = "Formato requerido: 809-555-5555")]
     public string PhoneNumber { get; set; } = null!;
 
     /// <summary>

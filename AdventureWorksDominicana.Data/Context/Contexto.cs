@@ -1880,7 +1880,11 @@ public partial class Contexto : DbContext
         string adminRoleId = "a18be9c0-aa65-4af8-bd17-00bd9344e575";
         string vendedorRoleId = "b29ce9c0-bb65-4af8-bd17-00bd9344e576";
         string customerRoleId = "c30de9c0-cc65-4af8-bd17-00bd9344e577";
-
+        // Nuevos Roles
+        string productionManagerId = "4af5ac9c-cd9e-4b4b-9dd4-91519347ed9c";
+        string purchasingManagerId = "846957c0-ad3b-4063-b29b-76d81478a6d9";
+        string hrManagerId = "601f85f6-e309-46a3-84ea-2ac355f2848b";
+        string salesManagerId = "be4d0ea3-4436-4914-a7ac-ae204885beb1";
 
         modelBuilder.Entity<AspNetRole>().HasData(
             new AspNetRole
@@ -1902,6 +1906,35 @@ public partial class Contexto : DbContext
                 Id = customerRoleId,
                 Name = "Customer",
                 NormalizedName = "CUSTOMER",
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            },
+            // Nuevos Roles agregados:
+            new AspNetRole
+            {
+                Id = productionManagerId,
+                Name = "ProductionManager",
+                NormalizedName = "PRODUCTIONMANAGER",
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            },
+            new AspNetRole
+            {
+                Id = purchasingManagerId,
+                Name = "PurchasingManager",
+                NormalizedName = "PURCHASINGMANAGER",
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            },
+            new AspNetRole
+            {
+                Id = hrManagerId,
+                Name = "HRManager",
+                NormalizedName = "HRMANAGER",
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            },
+            new AspNetRole
+            {
+                Id = salesManagerId,
+                Name = "SalesManager",
+                NormalizedName = "SALESMANAGER",
                 ConcurrencyStamp = Guid.NewGuid().ToString()
             });
 

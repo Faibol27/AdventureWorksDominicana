@@ -1,0 +1,144 @@
+﻿@page "/PurchaseOrder/Create"
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Data.Context
+@using Microsoft.EntityFrameworkCore
+@inject Contexto Db
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Crear Orden de Compra</PageTitle>
+
+<div class="border-bottom pb-2 mb-4">
+    <h4>Crear Registro de Orden de Compra</h4>
+</div>
+
+<EditForm Model="order" OnValidSubmit="GuardarOrden">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Proveedor</label>
+                    <InputSelect @bind-Value="order.VendorId" class="form-control">
+                        <option value="0">Ej: Seleccione un Proveedor</option>
+                        @if (proveedores != null)
+                        {
+                            @foreach (var v in proveedores)
+                            {
+                                <option value="@v.BusinessEntityId">@v.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                </div>
+
+               
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Método de Envío</label>
+                    <InputSelect @bind-Value="order.ShipMethodId" class="form-control">
+                        <option value="0">Ej: Seleccione Método</option>
+                        @if (metodos != null)
+                        {
+                            @foreach (var m in metodos)
+                            {
+                                <option value="@m.ShipMethodId">@m.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                </div>
+
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Fecha de Orden</label>
+                    <InputDate @bind-Value="order.OrderDate" class="form-control" />
+                </div>
+
+               
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Revisión</label>
+                    <input type="number" class="form-control bg-light" value="@order.RevisionNumber" readonly />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Estado</label>
+                    <input type="text" class="form-control bg-light" value="Pendiente" readonly />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="card shadow-sm mb-4 border-info">
+        <div class="card-header bg-info text-white py-1">
+            <h6 class="mb-0">Detalles de la Orden (Parte de Hanlet)</h6>
+        </div>
+        <div class="card-body text-center">
+            @if (order.PurchaseOrderDetails == null || order.PurchaseOrderDetails.Count == 0)
+            {
+                <p class="text-muted small italic">Aquí Hanlet implementará la tabla para agregar productos.</p>
+            }
+        </div>
+    </div>
+
+    
+    <div class="row justify-content-end mb-4">
+        <div class="col-md-3 text-end border-top pt-2">
+            <p class="mb-1"><strong>SubTotal:</strong> @order.SubTotal.ToString("C")</p>
+            <p class="mb-1"><strong>Impuestos:</strong> @order.TaxAmt.ToString("C")</p>
+            <h5 class="text-primary"><strong>Total Final: @order.TotalDue.ToString("C")</strong></h5>
+        </div>
+    </div>
+
+    
+    <div class="d-flex justify-content-center gap-2">
+        <a href="/PurchaseOrder" class="btn btn-primary d-flex align-items-center">
+            ← Volver
+        </a>
+        <button type="submit" class="btn btn-success d-flex align-items-center">
+            💾 Guardar
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    private PurchaseOrderHeader order = new PurchaseOrderHeader
+    {
+        OrderDate = DateTime.Now,
+        RevisionNumber = 0,
+        Status = 1,
+        ModifiedDate = DateTime.Now,
+        EmployeeId = 1, 
+        PurchaseOrderDetails = new List<PurchaseOrderDetail>()
+    };
+
+    private List<Vendor>? proveedores;
+    private List<ShipMethod>? metodos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+        proveedores = await Db.Vendors.OrderBy(v => v.Name).ToListAsync();
+        metodos = await Db.ShipMethods.OrderBy(s => s.Name).ToListAsync();
+    }
+
+    private async Task GuardarOrden()
+    {
+        try
+        {
+            
+            Db.PurchaseOrderHeaders.Add(order);
+            await Db.SaveChangesAsync();
+            
+            
+            navigationManager.NavigateTo("/PurchaseOrder");
+        }
+        catch (Exception ex)
+        {
+            
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}

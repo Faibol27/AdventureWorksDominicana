@@ -1,0 +1,323 @@
+﻿@page "/MyAccount"
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject ToastService toastService
+@inject PhoneNumberTypeService phoneNumberTypeService
+@inject PersonService personService
+@rendermode InteractiveServer
+
+<EditForm Model="Modelo" OnValidSubmit="GuardarCambios">
+    <DataAnnotationsValidator />
+
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="fw-bold">Mi Cuenta</h2>
+                <p class="text-muted">Gestiona tu informaci&oacute;n personal y m&eacute;todos de contacto.</p>
+                @if (datosSinGuardar)
+                {
+                    <p class="text-danger">Hay cambios importantes sin guardar.</p>
+                }
+                
+            </div>
+            <div class="col-auto d-flex align-items-center">
+                <button type="submit" class="btn btn-primary px-4 shadow-sm bi bi-floppy"> Guardar Cambios</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-5 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body p-4">
+                        <h4 class="card-title fw-semibold mb-4">Informaci&oacute;n Personal</h4>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Nombre</label>
+                            <input type="text" class="form-control bg-light" @bind="Modelo.FirstName" readonly />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Segundo Nombre</label>
+                            <input type="text" class="form-control" @bind="Modelo.MiddleName" placeholder="Opcional" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Apellido</label>
+                            <input type="text" class="form-control bg-light" @bind="Modelo.LastName" readonly />
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="promoSwitch" @bind="Modelo.WantsPromotions">
+                            <label class="form-check-label" for="promoSwitch">
+                                Deseo recibir correos promocionales y ofertas
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="card-title fw-semibold mb-3">Correos Electrónicos</h5>
+            
+                        <div class="mb-4">
+                            <label class="form-label text-muted small mb-1">Correo de Acceso (Principal)</label>
+                            <input type="text" class="form-control bg-light" value="@UserEmail" readonly />
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-medium mb-0">Correos Alternativos</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarCorreo">
+                                + Agregar Correo
+                            </button>
+                        </div>
+
+                        @foreach (var email in Modelo.Emails)
+                        {
+                            <div class="row g-2 mb-2 align-items-center">
+                                <div class="col">
+                                    <input type="email" class="form-control" @bind="email.EmailAddress1" placeholder="ejemplo@correo.com" />
+                                    <ValidationMessage For="@(() => email.EmailAddress1)" class="text-danger small" />
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-outline-danger" @onclick="() => EliminarCorreo(email)">Eliminar</button>
+                                </div>
+                            </div>
+                        }
+                        @if (!Modelo.Emails.Any())
+                        {
+                            <div class="alert alert-light border text-center text-muted" role="alert">
+                                No tienes correos alternativos registrados.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-semibold mb-0">N&uacute;meros de Tel&eacute;fono</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarTelefono">
+                                + Agregar Tel&eacute;fono
+                            </button>
+                        </div>
+
+                        @foreach (var phone in Modelo.Phones)
+                        {
+                            <div class="row g-2 mb-2 align-items-start">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control" @bind="phone.PhoneNumber" placeholder="Ej: 809-555-5555" />
+                                    <ValidationMessage For="@(() => phone.PhoneNumber)" class="text-danger small" />
+                                </div>
+                                <div class="col-md-5">
+                                    <select class="form-select" @bind="phone.PhoneNumberTypeId">
+                                        @foreach (var tipo in ListaTiposTelefono)
+                                        {
+                                            <option value="@tipo.PhoneNumberTypeId">@tipo.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-outline-danger" @onclick="() => EliminarTelefono(phone)">Eliminar</button>
+                                </div>
+                            </div>
+                        }
+                        @if (!Modelo.Phones.Any())
+                        {
+                            <div class="alert alert-light border text-center text-muted" role="alert">
+                                No hay tel&eacute;fonos registrados.
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private ClaimsPrincipal? User { get; set; }
+    private bool IsAuthenticated { get; set; }
+    private string? UserEmail { get; set; }
+    private string UserId { get; set; } = string.Empty;
+    private int _businessEntityId = 0;
+
+    private List<PhoneNumberType> ListaTiposTelefono { get; set; } = new();
+
+    private bool datosSinGuardar = false;
+
+    private AccountViewModel Modelo { get; set; } = new();
+
+    // Clases visuales con validacion
+    public class AccountViewModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string MiddleName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public bool WantsPromotions { get; set; }
+
+        public List<EmailAddress> Emails { get; set; } = new();
+        public List<PersonPhone> Phones { get; set; } = new();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListaTiposTelefono = await phoneNumberTypeService.GetList(x => true);
+
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        User = authState.User;
+        IsAuthenticated = User.Identity?.IsAuthenticated ?? false;
+
+        if (IsAuthenticated)
+        {
+            UserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(idClaim) && !string.IsNullOrEmpty(UserEmail))
+            {
+                UserId = idClaim;
+                await CargarDatosDelUsuario(UserEmail);
+            }
+            else
+            {
+                toastService.ShowError("No se pudo identificar al usuario.");
+            }
+        }
+    }
+
+    private async Task CargarDatosDelUsuario(string email)
+    {
+        var personaDB = await personService.BuscarPorEmailCompleto(email);
+
+        if (personaDB != null)
+        {
+            _businessEntityId = personaDB.BusinessEntityId;
+            Modelo.FirstName = personaDB.FirstName;
+            Modelo.MiddleName = personaDB.MiddleName ?? string.Empty;
+            Modelo.LastName = personaDB.LastName;
+            Modelo.WantsPromotions = personaDB.EmailPromotion > 0;
+
+            if (personaDB.EmailAddresses != null)
+            {
+                Modelo.Emails = personaDB.EmailAddresses
+                    .Where(e => e.EmailAddress1 != email)
+                    .Select(e => new EmailAddress { EmailAddress1 = e.EmailAddress1 })
+                    .ToList();
+            }
+
+            if (personaDB.PersonPhones != null)
+            {
+                Modelo.Phones = personaDB.PersonPhones
+                    .Select(p => new PersonPhone
+                    {
+                        PhoneNumber = p.PhoneNumber,
+                        PhoneNumberTypeId = p.PhoneNumberTypeId
+                    })
+                    .ToList();
+            }
+        }
+        else
+        {
+            toastService.ShowWarning("No encontramos tu perfil en el sistema. Completa tus datos.");
+        }
+    }
+
+    private void AgregarCorreo() { Modelo.Emails.Add(new EmailAddress()); datosSinGuardar = true; }
+    private void EliminarCorreo(EmailAddress item) { Modelo.Emails.Remove(item); datosSinGuardar = true; }
+
+    private void AgregarTelefono()
+    {
+        int defaultType = ListaTiposTelefono.FirstOrDefault()?.PhoneNumberTypeId ?? 1;
+        Modelo.Phones.Add(new PersonPhone { PhoneNumberTypeId = defaultType });
+        datosSinGuardar = true;
+    }
+    private void EliminarTelefono(PersonPhone item) { Modelo.Phones.Remove(item); datosSinGuardar = true; }
+
+    private async Task GuardarCambios()
+    {
+        if (_businessEntityId == 0)
+        {
+            toastService.ShowWarning("Aún no tienes un perfil base.");
+            return;
+        }
+
+        foreach (var phone in Modelo.Phones)
+        {
+            if (string.IsNullOrWhiteSpace(phone.PhoneNumber)) continue;
+            
+            var context = new ValidationContext(phone);
+            var results = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(phone, context, results, true))
+            {
+                toastService.ShowError( $"Error en el formato del teléfono. [{phone.PhoneNumber}]");
+                return;
+            }
+        }
+
+        foreach (var email in Modelo.Emails)
+        {
+            if (string.IsNullOrWhiteSpace(email.EmailAddress1)) continue;
+
+            var context = new ValidationContext(email);
+            var results = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(email, context, results, true))
+            {
+                toastService.ShowError( $"Error en el formato del correo. [{email.EmailAddress1}]");
+                return;
+            }
+        }
+
+        var personaActualizada = new Person
+        {
+            FirstName = Modelo.FirstName,
+            MiddleName = string.IsNullOrWhiteSpace(Modelo.MiddleName) ? null : Modelo.MiddleName,
+            LastName = Modelo.LastName,
+            EmailPromotion = Modelo.WantsPromotions ? 1 : 0
+        };
+
+        //  CORREO PRINCIPAL
+        if (!string.IsNullOrEmpty(UserEmail))
+        {
+            personaActualizada.EmailAddresses.Add(new EmailAddress { EmailAddress1 = UserEmail });
+        }
+
+        //  CORREOS ALTERNATIVOS
+        foreach (var email in Modelo.Emails.Where(e => !string.IsNullOrWhiteSpace(e.EmailAddress1)))
+        {
+            personaActualizada.EmailAddresses.Add(new EmailAddress { EmailAddress1 = email.EmailAddress1 });
+        }
+
+        // Teléfonos
+        foreach (var phone in Modelo.Phones.Where(p => !string.IsNullOrWhiteSpace(p.PhoneNumber)))
+        {
+            personaActualizada.PersonPhones.Add(new PersonPhone
+            {
+                PhoneNumber = phone.PhoneNumber,
+                PhoneNumberTypeId = phone.PhoneNumberTypeId
+            });
+        }
+
+        var exito = await personService.ActualizarPerfilCompleto(_businessEntityId, personaActualizada);
+
+        if (exito)
+        {
+            Modelo.Emails.RemoveAll(e => string.IsNullOrEmpty(e.EmailAddress1));
+            Modelo.Phones.RemoveAll(p => string.IsNullOrEmpty(p.PhoneNumber));
+
+            toastService.ShowSuccess("Tus cambios han sido guardados correctamente.");
+            datosSinGuardar = false;
+        }
+        else
+        {
+            toastService.ShowError("Ocurrió un error al intentar guardar los cambios.");
+        }
+    }
+}

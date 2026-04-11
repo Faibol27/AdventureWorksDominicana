@@ -106,4 +106,66 @@ public class PersonService(IDbContextFactory<Contexto> DbFactory) : IService<Per
             .ThenBy(p => p.LastName)
             .ToListAsync();
     }
+
+    public async Task<Person?> BuscarPorEmailCompleto(string email)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        return await contexto.People
+            .AsNoTracking()
+            .Include(p => p.EmailAddresses)
+            .Include(p => p.PersonPhones)
+            .Include(p => p.PersonCreditCards) 
+            .FirstOrDefaultAsync(p => p.EmailAddresses.Any(e => e.EmailAddress1 == email));
+    }
+    public async Task<bool> ActualizarPerfilCompleto(int id, Person datosNuevos)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        // Aquí busco la persona con sus relaciones actuales y activando el Tracking
+        var personaDB = await contexto.People
+            .Include(p => p.EmailAddresses)
+            .Include(p => p.PersonPhones)
+            .FirstOrDefaultAsync(p => p.BusinessEntityId == id);
+
+        if (personaDB == null) return false;
+
+        // Actualizo datos 
+        personaDB.FirstName = datosNuevos.FirstName;
+        personaDB.MiddleName = datosNuevos.MiddleName;
+        personaDB.LastName = datosNuevos.LastName;
+        personaDB.EmailPromotion = datosNuevos.EmailPromotion;
+        personaDB.ModifiedDate = DateTime.Now;
+
+        // sINCRONIZO correos electronicos
+        contexto.EmailAddresses.RemoveRange(personaDB.EmailAddresses);
+
+        foreach (var email in datosNuevos.EmailAddresses)
+        {
+            personaDB.EmailAddresses.Add(new EmailAddress
+            {
+                BusinessEntityId = id,
+                EmailAddress1 = email.EmailAddress1,
+                Rowguid = Guid.NewGuid(),
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        // Sincronizo teléfonos
+        contexto.PersonPhones.RemoveRange(personaDB.PersonPhones);
+
+        foreach (var phone in datosNuevos.PersonPhones)
+        {
+            personaDB.PersonPhones.Add(new PersonPhone
+            {
+                BusinessEntityId = id,
+                PhoneNumber = phone.PhoneNumber,
+                PhoneNumberTypeId = phone.PhoneNumberTypeId,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        // Guardo todos los cambios
+        return await contexto.SaveChangesAsync() > 0;
+    }
 }

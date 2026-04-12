@@ -79,7 +79,7 @@
                                 </div>
                                 <div>
                                     <label>Estado/Provincia</label>
-                                    <InputSelect @bind-Value="NewShipAddress.StateProvinceId" class="form-select">
+                                    <InputSelect @bind-Value="NewShipAddress.StateProvinceId" @bind-Value:after="GetTaxes" class="form-select">
                                         <option value="0">Seleccione un Estado/Provincia</option>
                                         @foreach (var s in StateProvinceList)
                                         {
@@ -491,6 +491,7 @@
             validatorMessage = "Debe llenar todos los campos de dirección";
             return null;
         }
+
         var shipAddressId = await SaveAddress(showRegisterAddress, NewShipAddress, 1, SalesOrderHeader.ShipToAddressId);
         var creditCardId = await SaveCreditCards();
         var billAddressId = await SaveAddress(showRegisterNewBillAddress, NewBillAddress, 2, SalesOrderHeader.BillToAddressId);
@@ -533,7 +534,8 @@
         foreach (var s in ShoppingCartItemList)
         {
             var offer = s.Product?.SpecialOfferProducts?
-                .Where(x => x.SpecialOffer.StartDate <= DateTime.Now && x.SpecialOffer.EndDate >= DateTime.Now)
+                .Where(x => x.SpecialOffer.StartDate <= DateTime.Now && x.SpecialOffer.EndDate >= DateTime.Now).Where(x => x.SpecialOffer.Category == "Customer")
+                .Where(o => s.Quantity >= o.SpecialOffer.MinQty)
                 .OrderByDescending(x => x.SpecialOffer.DiscountPct)
                 .FirstOrDefault();
 
@@ -606,7 +608,7 @@
         {
             var offer = p.Product?.SpecialOfferProducts?
                 .Select(x => x.SpecialOffer)
-                .Where(o => o.StartDate <= DateTime.Now && o.EndDate >= DateTime.Now)
+                .Where(o => o.StartDate <= DateTime.Now && o.EndDate >= DateTime.Now && p.Quantity >= o.MinQty && o.Category == "Customer")
                 .OrderByDescending(o => o.DiscountPct)
                 .FirstOrDefault();
             var discount = offer?.DiscountPct ?? 0;
@@ -622,7 +624,18 @@
             subtotal += (p?.Product?.ListPrice ?? 0) * (p?.Quantity ?? 0);
     }
 
-    private void GetTaxes() => taxes = ShippingAddressesList.FirstOrDefault(t => t.AddressId == SalesOrderHeader.ShipToAddressId)?.StateProvince?.SalesTaxRates?.FirstOrDefault()?.TaxRate ?? 0;
+    private void GetTaxes()
+    {
+        var address = ShippingAddressesList.FirstOrDefault(t => t.AddressId == SalesOrderHeader.ShipToAddressId)?.StateProvince?.SalesTaxRates?.FirstOrDefault();
+
+        if (address != null)
+        {
+            taxes = address.TaxRate;
+
+        }
+        else
+            taxes = StateProvinceList.FirstOrDefault(s => s.StateProvinceId == NewShipAddress.StateProvinceId)?.SalesTaxRates.First().TaxRate ?? 0;
+    }
 
     private void GetFreight()
     {

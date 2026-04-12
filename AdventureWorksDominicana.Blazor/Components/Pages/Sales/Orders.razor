@@ -1,4 +1,6 @@
 ﻿@page "/Orders"
+@attribute [Authorize(Roles = "Admin, Customer, SalesManager")]
+
 @rendermode InteractiveServer
 @inject SalesOrderHeaderService salesOrderHeaderService
 @inject NavigationManager navigationManager

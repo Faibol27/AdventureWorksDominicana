@@ -1,4 +1,6 @@
 ﻿@page "/PurchaseOrder/Create"
+@attribute [Authorize(Roles = "Admin, PurchasingManager")]
+
 @using AdventureWorksDominicana.Data.Models
 @using AdventureWorksDominicana.Data.Context
 @using Microsoft.EntityFrameworkCore

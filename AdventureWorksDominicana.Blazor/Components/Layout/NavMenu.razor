@@ -104,7 +104,7 @@
             <div class="accordion-item bg-transparent border-0">
                 <div class="accordion-header">
                     <button class="accordion-button collapsed bg-transparent px-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInventory">
-                        <span class="bi bi-boxes"></span> <small class="ms-2">Warehouse</small>
+                        <span class="bi bi-boxes-nav-menu"></span> <small class="ms-2">Warehouse</small>
                     </button>
                 </div>
                 <div id="collapseInventory" class="accordion-collapse collapse" data-bs-parent="#accordionInventory">
@@ -116,15 +116,13 @@
                         </div>
                         <div class="nav-item">
                             <NavLink class="nav-link" href="/Product/Inventory">
-                                <span class="bi bi-inboxes-fill"></span> <small class="ms-2">Inventory</small>
+                                <span class="bi bi-inboxes-fill-nav-menu"></span> <small class="ms-2">Inventory</small>
                             </NavLink>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-
 
         @* ========== GEOGRAPHY MODULE ========== *@
         <div class="accordion px-3 nav-item" id="accordionGeography">
@@ -238,21 +236,28 @@
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/Customer/Index">
-                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Customers
+                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> <small>Customers</small>
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/Store/Index">
-                <span class="bi bi-shop-fill-nav-menu" aria-hidden="true"></span> Store
+                <span class="bi bi-shop-fill-nav-menu" aria-hidden="true"></span> <small>Store</small>
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/MyAccount">
-                <span class="bi bi-shop-fill-nav-menu" aria-hidden="true"></span> My Account
+                <span class="bi bi-person-circle-nav-menu" aria-hidden="true"></span> <small>My Account</small>
             </NavLink>
         </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/PaymentsMethods">
+                <span class="bi bi-shop-fill-nav-menu" aria-hidden="true"></span> <small>Payments Methods</small>
+            </NavLink>
+        </div>
+
 
         <AuthorizeView>
             <Authorized>

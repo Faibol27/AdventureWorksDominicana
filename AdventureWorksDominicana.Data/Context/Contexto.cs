@@ -1916,11 +1916,15 @@ public partial class Contexto : DbContext
         string adminRoleId = "a18be9c0-aa65-4af8-bd17-00bd9344e575";
         string vendedorRoleId = "b29ce9c0-bb65-4af8-bd17-00bd9344e576";
         string customerRoleId = "c30de9c0-cc65-4af8-bd17-00bd9344e577";
-        // Nuevos Roles
+
+        
         string productionManagerId = "4af5ac9c-cd9e-4b4b-9dd4-91519347ed9c";
         string purchasingManagerId = "846957c0-ad3b-4063-b29b-76d81478a6d9";
         string hrManagerId = "601f85f6-e309-46a3-84ea-2ac355f2848b";
         string salesManagerId = "be4d0ea3-4436-4914-a7ac-ae204885beb1";
+
+        
+        DateTime fechaSeed = new DateTime(2026, 4, 11, 12, 0, 0);
 
         modelBuilder.Entity<AspNetRole>().HasData(
             new AspNetRole
@@ -1928,65 +1932,65 @@ public partial class Contexto : DbContext
                 Id = adminRoleId,
                 Name = "Admin",
                 NormalizedName = "ADMIN",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "7a151b4a-81f1-419b-ab28-7fb0661266ec" 
             },
             new AspNetRole
             {
                 Id = vendedorRoleId,
                 Name = "Vendor",
                 NormalizedName = "VENDOR",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "f2a281ab-2a44-48db-a2d0-06fbf3099908" 
             },
             new AspNetRole
             {
                 Id = customerRoleId,
                 Name = "Customer",
                 NormalizedName = "CUSTOMER",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "c5b2ea1d-84bf-42cd-9430-b5cc8579d460" 
             },
-            // Nuevos Roles agregados:
             new AspNetRole
             {
                 Id = productionManagerId,
                 Name = "ProductionManager",
                 NormalizedName = "PRODUCTIONMANAGER",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "d6b7b2de-92af-425b-8664-df82089ba9c2" 
             },
             new AspNetRole
             {
                 Id = purchasingManagerId,
                 Name = "PurchasingManager",
                 NormalizedName = "PURCHASINGMANAGER",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "e98e4d3c-353d-4cba-a185-115f5907edba" 
             },
             new AspNetRole
             {
                 Id = hrManagerId,
                 Name = "HRManager",
                 NormalizedName = "HRMANAGER",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "a718302f-5374-42f1-aa8f-d232cf628213" 
             },
             new AspNetRole
             {
                 Id = salesManagerId,
                 Name = "SalesManager",
                 NormalizedName = "SALESMANAGER",
-                ConcurrencyStamp = Guid.NewGuid().ToString()
+                ConcurrencyStamp = "8b23c218-c2b6-455b-82a1-b4f0b2f15591" 
             });
 
         modelBuilder.Entity<UnitMeasure>().HasData(
-            new UnitMeasure { UnitMeasureCode = "CM", Name = "Centimeter", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "M", Name = "Meter", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "KG", Name = "Kilogram", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "L", Name = "Liter", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "IN", Name = "Inch", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "FT", Name = "Foot", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "YD", Name = "Yard", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "G", Name = "Gram", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "MG", Name = "Milligram", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "BOX", Name = "Box", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "PK", Name = "Pack", ModifiedDate = DateTime.Now },
-            new UnitMeasure { UnitMeasureCode = "DZ", Name = "Dozen", ModifiedDate = DateTime.Now }
+
+            new UnitMeasure { UnitMeasureCode = "CM", Name = "Centimeter", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "M", Name = "Meter", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "KG", Name = "Kilogram", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "L", Name = "Liter", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "IN", Name = "Inch", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "FT", Name = "Foot", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "YD", Name = "Yard", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "G", Name = "Gram", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "MG", Name = "Milligram", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "BOX", Name = "Box", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "PK", Name = "Pack", ModifiedDate = fechaSeed },
+            new UnitMeasure { UnitMeasureCode = "DZ", Name = "Dozen", ModifiedDate = fechaSeed }
         );
 
 

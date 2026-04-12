@@ -101,6 +101,8 @@ builder.Services.AddScoped<ProductPhotoService>();
 builder.Services.AddScoped<UserService>();
 
 
+builder.Services.AddScoped<BusinessEntityAddressService>();
+builder.Services.AddScoped<PersonCreditCardService>();
 var app = builder.Build();
 
 

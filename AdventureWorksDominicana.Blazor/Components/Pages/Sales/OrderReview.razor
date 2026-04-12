@@ -1,5 +1,5 @@
 ﻿@page "/Order/Review/{SalesOrderId:int}"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin, Customer")]
 
 @rendermode InteractiveServer
 @inject SalesOrderHeaderService salesOrderHeaderService

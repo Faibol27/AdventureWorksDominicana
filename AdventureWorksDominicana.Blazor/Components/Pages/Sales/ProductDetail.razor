@@ -1,5 +1,5 @@
 ﻿@page "/Product/Detail/{ProductId:int}"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin, Customer")]
 
 @rendermode InteractiveServer
 

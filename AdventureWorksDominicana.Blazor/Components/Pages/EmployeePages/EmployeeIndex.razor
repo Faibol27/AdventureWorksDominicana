@@ -13,16 +13,16 @@
         <div class="card-body">
             @* Encabezados *@
             <div class="row">
-                <div class="col-3">
+                <div class="col-3 fw-bold">
                     <label>Desde:</label>
                 </div>
-                <div class="col-3">
+                <div class="col-3 fw-bold">
                     <label>Hasta:</label>
                 </div>
-                <div class="col-3">
+                <div class="col-3 fw-bold">
                     <label>Filtro:</label>
                 </div>
-                <div class="col-3">
+                <div class="col-3 fw-bold">
                     <label>Buscar:</label>
                 </div>
             </div>
@@ -71,7 +71,13 @@
                         }
                     </TemplateColumn>
                     <TemplateColumn Class="text-center" Context="options" Title="Acci&oacute;n">
-                        <a href="/Employee/Edit/@options.BusinessEntityId" class="btn btn-outline-primary bi bi-pencil-square"> Modificar</a>
+                            <a href="/Employee/Edit/@options.BusinessEntityId"
+                               class="btn btn-outline-primary btn-sm bi bi-pencil-square me-1"
+                               title="Editar Datos"></a>
+        
+                            <a href="/Employee/PayHistory/@options.BusinessEntityId"
+                               class="btn btn-outline-success btn-sm bi bi-cash-stack"
+                               title="Gestionar Sueldo"></a>
                     </TemplateColumn>
                 </QuickGrid>
             </div>

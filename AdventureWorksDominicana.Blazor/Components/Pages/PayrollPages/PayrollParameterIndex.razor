@@ -1,0 +1,180 @@
+﻿@page "/PayrollParameters/Index"
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Services
+@inject PayrollParameterService parameterService
+@inject ToastService toastService
+@rendermode InteractiveServer
+
+<PageTitle>Parámetros de N&oacute;mina</PageTitle>
+
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">
+                    <i class="bi bi-gear-fill me-2"></i>Par&aacute;metros de N&oacute;mina
+                </h4>
+                <small class="text-muted">Configuraci&oacute;n de ley (TSS / DGII)</small>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-primary shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#formParametro" @onclick="NuevoParametro">
+                    <i class="bi bi-plus-lg me-1"></i> Nueva Configuración
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body p-4">
+            
+            <div class="collapse mb-5" id="formParametro">
+                <div class="p-4 border border-primary border-opacity-25 rounded-3 bg-light shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase text-primary fw-bold mb-0">
+                            <i class="bi bi-pencil-square me-2"></i>@(Modelo.PayrollParameterId == 0 ? "Nueva Ley" : "Editar Parámetros")
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-toggle="collapse" data-bs-target="#formParametro"></button>
+                    </div>
+                    
+                    <EditForm Model="Modelo" OnValidSubmit="Guardar">
+                        <DataAnnotationsValidator />
+                        <div class="row g-3 align-items-start">
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-muted">SFS (%)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-heart-pulse"></i></span>
+                                    <InputNumber class="form-control" @bind-Value="Modelo.SfsPct" Step="0.0001" />
+                                </div>
+                                <div class="text-danger small mt-1">
+                                    <ValidationMessage For="@(() => Modelo.SfsPct)" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-muted">AFP (%)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-piggy-bank"></i></span>
+                                    <InputNumber class="form-control" @bind-Value="Modelo.AfpPct" Step="0.0001" />
+                                </div>
+                                <div class="text-danger small mt-1">
+                                    <ValidationMessage For="@(() => Modelo.AfpPct)" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 d-flex align-items-center h-100 mt-4">
+                                <div class="form-check form-switch mt-2">
+                                    <InputCheckbox class="form-check-input" @bind-Value="Modelo.IsActive" id="activeSwitch" />
+                                    <label class="form-check-label fw-bold" for="activeSwitch">Ley Vigente</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 mt-3">
+                                <label class="form-label fw-bold small text-muted">Sueldo M&Iacute;nimo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white fw-bold">RD$</span>
+                                    <InputNumber class="form-control" @bind-Value="Modelo.MinimumWage" />
+                                </div>
+                                <ValidationMessage For="@(() => Modelo.MinimumWage)" class="text-danger small" />
+                            </div>
+
+                            <div class="col-md-3 mt-3">
+                                <label class="form-label fw-bold small text-muted">Exento ISR (Anual)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white fw-bold">RD$</span>
+                                    <InputNumber class="form-control" @bind-Value="Modelo.IsrAnnualExemption" />
+                                </div>
+                                <ValidationMessage For="@(() => Modelo.IsrAnnualExemption)" class="text-danger small" />
+                            </div>
+
+                            <div class="col-md-4 mt-3">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                                    <i class="bi bi-floppy me-1"></i> Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="table-responsive border rounded-3 shadow-sm bg-white">
+                <QuickGrid Items="ListaParametros" Class="table table-hover align-middle mb-0" Pagination="@pages">
+                    <PropertyColumn Property="@(p => p.PayrollParameterId)" Title="ID" Sortable="true" />
+                    <PropertyColumn Property="@(p => p.SfsPct)" Title="SFS" Format="P2" Sortable="true" />
+                    <PropertyColumn Property="@(p => p.AfpPct)" Title="AFP" Format="P2" Sortable="true" />
+                    
+                    <TemplateColumn Title="Topes / Exento">
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-dark">RD$ @context.MinimumWage.ToString("N2")</span>
+                            <span class="text-muted small">Exento: @context.IsrAnnualExemption.ToString("N0")</span>
+                        </div>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Estado">
+                        <span class="badge rounded-pill @(context.IsActive ? "bg-primary-subtle text-primary border border-primary-subtle" : "bg-light text-secondary border") px-3">
+                            <i class="bi @(context.IsActive ? "bi-check-circle-fill" : "bi-clock-history") me-1"></i>
+                            @(context.IsActive ? "Vigente" : "Histórico")
+                        </span>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Acciones" Align="Align.Center">
+                        <button class="btn btn-link text-primary p-0" title="Editar" @onclick="() => Editar(context)" data-bs-toggle="collapse" data-bs-target="#formParametro">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </button>
+                    </TemplateColumn>
+                </QuickGrid>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <Paginator State="@pages" />
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <a class="btn btn-secondary" href="/">
+                <i class="bi bi-arrow-left-short"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IQueryable<PayrollParameter> ListaParametros { get; set; } = Enumerable.Empty<PayrollParameter>().AsQueryable();
+    private PayrollParameter Modelo { get; set; } = new();
+    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarLista();
+    }
+
+    private async Task CargarLista()
+    {
+        var result = await parameterService.GetList(p => true);
+        ListaParametros = result.OrderByDescending(p => p.IsActive).AsQueryable();
+    }
+
+    private void NuevoParametro()
+    {
+        Modelo = new PayrollParameter { IsActive = true, SfsPct = 0.0304m, AfpPct = 0.0287m };
+    }
+
+    private void Editar(PayrollParameter item)
+    {
+        Modelo = item;
+    }
+
+    private async Task Guardar()
+    {
+        var exito = await parameterService.Guardar(Modelo);
+        if (exito)
+        {
+            toastService.ShowSuccess("Parámetros actualizados correctamente.");
+            await CargarLista();
+            Modelo = new();
+        }
+        else
+        {
+            toastService.ShowError("Error al guardar los parámetros.");
+        }
+    }
+}

@@ -30,6 +30,7 @@
                     </div>
 
                     <div class="col-md-4">
+                        <label class="form-label fw-bold">% Descuento (Decimal: 0.15 = 15%)</label>
                         <label class="form-label fw-bold">% Descuento (Decimal)</label>
                         <InputNumber class="form-control" step="0.01" @bind-Value="Offer.DiscountPct" />
                         <ValidationMessage For="(() => Offer.DiscountPct)" />
@@ -111,13 +112,38 @@
 
     public async Task Guardar()
     {
+        if (string.IsNullOrWhiteSpace(Offer.Description))
+        {
+            toastService.ShowWarning("Debe ingresar una descripción para la oferta.");
+            return;
+        }
+
+        if (Offer.EndDate <= Offer.StartDate)
+        {
+            toastService.ShowWarning("LA FECHA DE FIN DEBE SER MAYOR A LA DE INICIO.");
+            return;
+        }
+
+        if (Offer.MaxQty.HasValue && Offer.MaxQty < Offer.MinQty)
+        {
+            toastService.ShowWarning("La cantidad máxima no puede ser menor a la mínima.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Offer.Type) || string.IsNullOrWhiteSpace(Offer.Category))
+        {
+            toastService.ShowWarning("Debe seleccionar un Tipo y una Categoría.");
+            return;
+        }
+
         if (await specialOfferService.Guardar(Offer))
         {
-            toastService.ShowSuccess("Oferta creada correctamente.");
+            toastService.ShowSuccess("Oferta guardada correctamente."); 
             navigationManager.NavigateTo("/SpecialOffer/Index");
         }
         else
         {
+            toastService.ShowError("Error al guardar en la base de datos.");
             toastService.ShowError("Error al guardar la oferta.");
         }
     }

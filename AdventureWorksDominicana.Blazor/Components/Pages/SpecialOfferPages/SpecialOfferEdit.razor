@@ -103,6 +103,7 @@
 @code {
     [Parameter] public int OfferId { get; set; }
     public SpecialOffer Offer { get; set; } = new SpecialOffer();
+    private bool ConfirmarEliminacion = false;
 
     protected override async Task OnInitializedAsync()
     {

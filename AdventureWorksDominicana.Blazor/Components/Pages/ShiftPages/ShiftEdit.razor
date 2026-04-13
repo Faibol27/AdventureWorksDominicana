@@ -115,7 +115,7 @@
             var exito = await shiftService.Eliminar(tanda.ShiftId);
             if (exito)
             {
-                toastService.ShowSuccess("Tanda actualizada correctamente.");
+                toastService.ShowSuccess("Tanda eliminada correctamente.");
                 navigationManager.NavigateTo("/Shift/Index");
             }
             else
@@ -161,6 +161,3 @@
         }
     }
     }
-  
-
-}

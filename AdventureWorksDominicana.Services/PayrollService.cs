@@ -3,11 +3,14 @@ using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace AdventureWorksDominicana.Services;
 
 public class PayrollService(IDbContextFactory<Contexto> DbFactory) : IService<Payroll, int>
 {
+    private const decimal TASA_CAMBIO = 60.50m; // Constante de conversión
+
     public async Task<bool> Guardar(Payroll entidad)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
@@ -36,7 +39,7 @@ public class PayrollService(IDbContextFactory<Contexto> DbFactory) : IService<Pa
         return await contexto.Payrolls
             .Include(p => p.PayrollDetails)
                 .ThenInclude(d => d.Employee)
-                    .ThenInclude(e => e.BusinessEntity) // Para traer nombres
+                    .ThenInclude(e => e.BusinessEntity)
             .FirstOrDefaultAsync(p => p.PayrollId == id);
     }
 
@@ -52,14 +55,14 @@ public class PayrollService(IDbContextFactory<Contexto> DbFactory) : IService<Pa
         return await contexto.Payrolls.Where(p => p.PayrollId == id).ExecuteDeleteAsync() > 0;
     }
 
-    public async Task ProcesarNomina(Payroll nominaBorrador)
+    public async Task<List<string>> ProcesarNomina(Payroll nominaBorrador)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
+        List<string> errores = new();
 
         var parametros = await contexto.PayrollParameters.AsNoTracking().FirstOrDefaultAsync(p => p.IsActive);
         if (parametros == null) throw new Exception("No hay parámetros de nómina activos.");
 
-        // Todos los empleados, para reducir las consultas.
         var empleados = await contexto.Employees
             .AsNoTracking()
             .Include(e => e.BusinessEntity)
@@ -76,52 +79,58 @@ public class PayrollService(IDbContextFactory<Contexto> DbFactory) : IService<Pa
             var sueldoActual = await contexto.EmployeePayHistories
                 .AsNoTracking()
                 .Where(h => h.BusinessEntityId == emp.BusinessEntityId)
-                .OrderByDescending(h => h.RateChangeDate) //Se toma el ultimo modificado
+                .OrderByDescending(h => h.RateChangeDate)
                 .FirstOrDefaultAsync();
 
-            if (sueldoActual == null || sueldoActual.Rate <= 0) continue;
+            string nombreEmpleado = emp.BusinessEntity != null
+                    ? $"{emp.BusinessEntity.FirstName} {emp.BusinessEntity.LastName}"
+                    : $"ID: {emp.BusinessEntityId}";
 
+            if (sueldoActual == null || sueldoActual.Rate <= 0)
+            {
+                errores.Add($"Advertencia: {nombreEmpleado} fue omitido porque no tiene un sueldo registrado.");
+                continue;
+            }
+
+            DateOnly inicioPeriodo = DateOnly.FromDateTime(nominaBorrador.PeriodStartDate);
             DateOnly finPeriodo = DateOnly.FromDateTime(nominaBorrador.PeriodEndDate);
-            //Tanda
+
             var asignacionDepto = await contexto.EmployeeDepartmentHistories
                 .AsNoTracking()
                 .Include(ed => ed.Shift)
                 .Where(ed => ed.BusinessEntityId == emp.BusinessEntityId &&
-                            (ed.EndDate == null || ed.EndDate >= finPeriodo))
+                             ed.StartDate <= finPeriodo &&
+                             (ed.EndDate == null || ed.EndDate >= inicioPeriodo))
+                .OrderByDescending(ed => ed.StartDate)
                 .FirstOrDefaultAsync();
 
-            // VALIDACIÓN CON NOMBRE YA CARGADO
             if (asignacionDepto?.Shift == null)
             {
-                string nombreEmpleado = emp.BusinessEntity != null
-                    ? $"{emp.BusinessEntity.FirstName} {emp.BusinessEntity.LastName}"
-                    : $"ID: {emp.BusinessEntityId}";
-
-                throw new Exception($"Error: El empleado {nombreEmpleado} no tiene una tanda (Shift) asignada.");
+                errores.Add($"Error: El empleado {nombreEmpleado} no tiene una tanda (Shift) asignada.");
+                continue;
             }
 
-            TimeSpan jornada = asignacionDepto.Shift.EndTime - asignacionDepto.Shift.StartTime; //TimeSpan hace un calculo exacto para un pago de horas preciso
+            TimeSpan jornada = asignacionDepto.Shift.EndTime - asignacionDepto.Shift.StartTime;
             decimal horasDiarias = (decimal)jornada.TotalHours;
-            if (horasDiarias > 5) horasDiarias -= 1; //Se le resta el armuerzo, legal por articulo.
+            if (horasDiarias > 5) horasDiarias -= 1;
 
-            // CÁLCULOS 
+            // CONVERSIÓN DE USD (BD) A DOP (RD$) PARA LOS CÁLCULOS
+            decimal sueldoPorHoraRD = sueldoActual.Rate * TASA_CAMBIO;
+
             decimal totalHorasTrabajadas = horasDiarias * diasLaborables;
-            decimal sueldoBrutoPeriodo = sueldoActual.Rate * totalHorasTrabajadas;
+            decimal sueldoBrutoPeriodo = sueldoPorHoraRD * totalHorasTrabajadas;
+            decimal sueldoMensualProyectado = (sueldoPorHoraRD * horasDiarias) * 23.83m;
 
-            // Proyección mensual (23.83 es el factor de ley en RD)
-            decimal sueldoMensualProyectado = (sueldoActual.Rate * horasDiarias) * 23.83m;
-
-            decimal baseSFS = Math.Min(sueldoMensualProyectado, topeSFS); //Se queda con el mas pequeño por el tope de cotización
+            decimal baseSFS = Math.Min(sueldoMensualProyectado, topeSFS);
             decimal baseAFP = Math.Min(sueldoMensualProyectado, topeAFP);
 
             decimal descuentoSFSMensual = baseSFS * parametros.SfsPct;
             decimal descuentoAFPMensual = baseAFP * parametros.AfpPct;
 
-            decimal sueldoNetoAntesISR = sueldoMensualProyectado - descuentoSFSMensual - descuentoAFPMensual; //Por ley, el dinero que el empleado paga para su seguro (SFS) y su pensión (AFP) está exento de impuestos
+            decimal sueldoNetoAntesISR = sueldoMensualProyectado - descuentoSFSMensual - descuentoAFPMensual;
             decimal isrMensual = CalcularISR(sueldoNetoAntesISR, parametros.IsrAnnualExemption);
 
-            // Proporción del periodo
-            decimal proporcion = (decimal)diasLaborables / 23.83m; //En la legislación laboral dominicana (Resolución 80-92), un mes no se cuenta como 30 días para fines de pago de sueldo, sino como 23.83 días laborables.
+            decimal proporcion = (decimal)diasLaborables / 23.83m;
 
             decimal dSFS = descuentoSFSMensual * proporcion;
             decimal dAFP = descuentoAFPMensual * proporcion;
@@ -137,51 +146,102 @@ public class PayrollService(IDbContextFactory<Contexto> DbFactory) : IService<Pa
                 NetSalary = sueldoBrutoPeriodo - dSFS - dAFP - dISR
             });
         }
+        return errores;
     }
 
-    // Método auxiliar para contar los días laborables (Lunes a Viernes) entre dos fechas
     private int CalcularDiasLaborables(DateTime fechaInicio, DateTime fechaFin)
     {
         int dias = 0;
         DateTime fechaActual = fechaInicio;
         while (fechaActual <= fechaFin)
         {
-            // Si no es sábado ni domingo, sumamos un día laborable
-            if (fechaActual.DayOfWeek != DayOfWeek.Saturday && fechaActual.DayOfWeek != DayOfWeek.Sunday)
-            {
-                dias++;
-            }
+            if (fechaActual.DayOfWeek != DayOfWeek.Saturday && fechaActual.DayOfWeek != DayOfWeek.Sunday) dias++;
             fechaActual = fechaActual.AddDays(1);
         }
-        return dias > 0 ? dias : 1; // Mínimo 1 día para evitar división por cero
+        return dias > 0 ? dias : 1;
     }
 
     private decimal CalcularISR(decimal sueldoMensualNeto, decimal exencionAnual)
     {
-        // Proyección anual
         decimal sueldoAnual = sueldoMensualNeto * 12;
-
-        if (sueldoAnual <= exencionAnual) return 0; // Exento
+        if (sueldoAnual <= exencionAnual) return 0;
 
         decimal isrAnual = 0;
+        decimal escala2 = 624329.00m;
+        decimal escala3 = 867123.00m;
 
-        // Escalas de la DGII 
-        decimal escala2 = 624329.00m; // 15%
-        decimal escala3 = 867123.00m; // 20%
+        if (sueldoAnual <= escala2) isrAnual = (sueldoAnual - exencionAnual) * 0.15m;
+        else if (sueldoAnual <= escala3) isrAnual = 31216.00m + ((sueldoAnual - escala2) * 0.20m);
+        else isrAnual = 79776.00m + ((sueldoAnual - escala3) * 0.25m);
 
-        if (sueldoAnual <= escala2)
+        return isrAnual / 12;
+    }
+
+    public async Task<string> GenerarArchivoTxtBanreservas(int payrollId)
+    {
+        var nomina = await Buscar(payrollId);
+        if (nomina == null || !nomina.PayrollDetails.Any()) return string.Empty;
+
+        var sb = new StringBuilder();
+
+        //  ENCABEZADO (41 caracteres) 
+        string rncEmpresa = "101000001".PadRight(11, ' ');
+        string fechaProceso = DateTime.Now.ToString("yyyyMMdd");
+        string totalEmpleados = nomina.PayrollDetails.Count.ToString().PadLeft(6, '0');
+
+        decimal montoTotal = nomina.PayrollDetails.Sum(d => d.NetSalary);
+        // Convertimos a centavos (multiplicar por 100) y rellenamos con ceros
+        string montoTotalStr = ((long)Math.Round(montoTotal * 100)).ToString().PadLeft(15, '0');
+
+        sb.AppendLine($"E{rncEmpresa}{fechaProceso}{totalEmpleados}{montoTotalStr}");
+
+        // DETALLE (72 caracteres)
+        foreach (var det in nomina.PayrollDetails)
         {
-            isrAnual = (sueldoAnual - exencionAnual) * 0.15m;
-        }
-        else if (sueldoAnual <= escala3)
-        {
-            isrAnual = 31216.00m + ((sueldoAnual - escala2) * 0.20m);
-        }
-        else // Tope máximo (25%)
-        {
-            isrAnual = 79776.00m + ((sueldoAnual - escala3) * 0.25m);
+            //  Cédula (11)
+            string cedula = det.Employee?.NationalIdnumber?.Replace("-", "").Replace(" ", "") ?? "";
+            cedula = cedula.PadRight(11, ' ');
+
+            // Cuenta Bancaria (15) - Usamos el campo que agregé a Employee 
+            string cuenta = det.Employee?.BankAccountNumber?.Trim() ?? "0000000000";
+            cuenta = cuenta.PadLeft(15, '0');
+
+            //  Monto Neto (15) - Centavos sin punto decimal
+            string montoNetoStr = ((long)Math.Round(det.NetSalary * 100)).ToString().PadLeft(15, '0');
+
+            //  Nombre (30) - Limpio de acentos y en Mayúsculas
+            string nombre = QuitarAcentos($"{det.Employee?.BusinessEntity?.FirstName} {det.Employee?.BusinessEntity?.LastName}".ToUpper());
+            nombre = nombre.Length > 30 ? nombre.Substring(0, 30) : nombre.PadRight(30, ' ');
+
+            sb.AppendLine($"D{cedula}{cuenta}{montoNetoStr}{nombre}");
         }
 
-        return isrAnual / 12; // Devolver valor mensual
+        return sb.ToString();
+    }
+
+    private string QuitarAcentos(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+
+        // Normaliza el texto para separar las tildes de las letras
+        var normalizedString = texto.Normalize(System.Text.NormalizationForm.FormD);
+        var stringBuilder = new System.Text.StringBuilder();
+
+        foreach (var c in normalizedString)
+        {
+            var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+            // Si el carácter no es una tilde/acento, lo agregamos
+            if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                stringBuilder.Append(c);
+            }
+        }
+
+        // Retorna el texto limpio, normalizado de vuelta y reemplaza la Ñ manualmente 
+        // ya que algunos bancos viejos no la procesan correctamente.
+        return stringBuilder.ToString()
+            .Normalize(System.Text.NormalizationForm.FormC)
+            .Replace("Ñ", "N")
+            .Replace("ñ", "n");
     }
 }

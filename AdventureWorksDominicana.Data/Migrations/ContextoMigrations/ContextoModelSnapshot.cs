@@ -1107,6 +1107,10 @@ namespace AdventureWorksDominicana.Data.Migrations.ContextoMigrations
                         .HasColumnName("BusinessEntityID")
                         .HasComment("Primary key for Employee records.  Foreign key to BusinessEntity.BusinessEntityID.");
 
+                    b.Property<string>("BankAccountNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<DateOnly>("BirthDate")
                         .HasColumnType("date")
                         .HasComment("Date of birth.");
@@ -1518,7 +1522,6 @@ namespace AdventureWorksDominicana.Data.Migrations.ContextoMigrations
                         .HasColumnType("date");
 
                     b.Property<int>("Status")
-                        .HasMaxLength(20)
                         .HasColumnType("int");
 
                     b.HasKey("PayrollId");

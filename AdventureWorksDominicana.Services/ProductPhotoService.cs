@@ -6,40 +6,50 @@ namespace AdventureWorksDominicana.Services;
 
 public class ProductPhotoService(IDbContextFactory<Contexto> DbContextFactory)
 {
-    public async Task<bool> AsignarFotoPrincipal(int productId, byte[] fotoData, string nombreArchivo)
+    public async Task<bool> AsignarFotoPrincipal(int productId, string rutaOUrl)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
 
+        var fotoPrincipalActual = await contexto.ProductProductPhotos
+            .Include(ppp => ppp.ProductPhoto)
+            .FirstOrDefaultAsync(ppp => ppp.ProductId == productId && ppp.Primary);
+
+        if (fotoPrincipalActual != null && fotoPrincipalActual.ProductPhoto != null)
+        {
+            fotoPrincipalActual.ProductPhoto.ThumbNailPhoto = null;
+            fotoPrincipalActual.ProductPhoto.LargePhoto = null;
+            fotoPrincipalActual.ProductPhoto.ThumbnailPhotoFileName = rutaOUrl;
+            fotoPrincipalActual.ProductPhoto.LargePhotoFileName = rutaOUrl;
+            fotoPrincipalActual.ProductPhoto.ModifiedDate = DateTime.Now;
+
+            fotoPrincipalActual.Primary = true;
+            fotoPrincipalActual.ModifiedDate = DateTime.Now;
+
+            return await contexto.SaveChangesAsync() > 0;
+        }
+
         var nuevaFoto = new ProductPhoto
         {
-            ThumbNailPhoto = fotoData,
-            ThumbnailPhotoFileName = nombreArchivo,
-            LargePhoto = fotoData,
-            LargePhotoFileName = nombreArchivo,
+            ThumbNailPhoto = null,
+            ThumbnailPhotoFileName = rutaOUrl,
+            LargePhoto = null,
+            LargePhotoFileName = rutaOUrl,
             ModifiedDate = DateTime.Now
         };
 
         contexto.ProductPhotos.Add(nuevaFoto);
-        await contexto.SaveChangesAsync(); 
-
-        var fotosAnteriores = await contexto.ProductProductPhotos
-            .Where(ppp => ppp.ProductId == productId)
-            .ToListAsync();
-
-        foreach (var f in fotosAnteriores)
-        {
-            f.Primary = false;
-        }
+        await contexto.SaveChangesAsync();
 
         var puente = new ProductProductPhoto
         {
             ProductId = productId,
             ProductPhotoId = nuevaFoto.ProductPhotoId,
-            Primary = true, 
+            Primary = true,
             ModifiedDate = DateTime.Now
         };
 
         contexto.ProductProductPhotos.Add(puente);
+
         return await contexto.SaveChangesAsync() > 0;
     }
 
@@ -49,7 +59,7 @@ public class ProductPhotoService(IDbContextFactory<Contexto> DbContextFactory)
 
         var nexo = await contexto.ProductProductPhotos
             .Include(ppp => ppp.ProductPhoto)
-            .FirstOrDefaultAsync(ppp => ppp.ProductId == productId && ppp.Primary == true);
+            .FirstOrDefaultAsync(ppp => ppp.ProductId == productId && ppp.Primary);
 
         return nexo?.ProductPhoto;
     }

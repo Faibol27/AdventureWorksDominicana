@@ -13,7 +13,6 @@
 
 <PageTitle>AdventureWorks - Tienda de Bicicletas</PageTitle>
 
-@* --- BOTÓN FLOTANTE DEL CARRITO --- *@
 <div class="cart-floating-trigger">
     <a href="/ShoppingCart" class="cart-button">
         <i class="bi bi-cart3"></i>
@@ -94,14 +93,9 @@
                     <div class="product-img">
                         @{
                             var nexoFoto = product.ProductProductPhotos?.FirstOrDefault(f => f.Primary == true);
-                            string imgUrl = "https://www.svgrepo.com/show/486796/product-management.svg";
-                            if (nexoFoto != null && nexoFoto.ProductPhoto?.ThumbNailPhoto != null)
-                            {
-                                var base64 = Convert.ToBase64String(nexoFoto.ProductPhoto.ThumbNailPhoto);
-                                imgUrl = $"data:image/jpeg;base64,{base64}";
-                            }
+                            string imgUrl = ResolverRutaImagen(nexoFoto?.ProductPhoto?.LargePhotoFileName);
                         }
-                        <img src="@imgUrl" alt="@product.Name" />
+                        <img src="@imgUrl" alt="@product.Name" style="object-fit: cover; width: 100%; height: 200px; border-radius: 8px 8px 0 0;" />
                         @if (product.ListPrice > 1000)
                         {
                             <span class="product-badge">Popular</span>
@@ -115,8 +109,6 @@
                         <div class="product-price">
                             RD$ @product.ListPrice.ToString("N2")
                         </div>
-
-                        @* --- SE ELIMINÓ LA SECCIÓN VISUAL DE STOCK AQUÍ --- *@
 
                         <button class="btn-add" @onclick="() => AddToCart(product.ProductId)">
                             <i class="bi bi-cart-plus"></i> Agregar
@@ -192,7 +184,6 @@
 </div>
 
 <style>
-    /* Estilos para el carrito y estados de stock */
     .cart-floating-trigger { position: fixed; top: 20px; right: 30px; z-index: 3000; }
     .cart-button { background: #0d6efd; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; position: relative; }
     .cart-button i { font-size: 1.8rem; }
@@ -251,8 +242,6 @@
             
             await shoppingCartItemService.Guardar(cartItem);
 
-            
-
             await UpdateCartCount();
             toastService.ShowSuccess("Producto añadido al carrito");
         }
@@ -272,5 +261,18 @@
         }
         toastService.ShowSuccess("¡Suscripción exitosa!");
         newsletterEmail = string.Empty;
+    }
+
+    private string ResolverRutaImagen(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "https://www.svgrepo.com/show/486796/product-management.svg";
+        if (valor.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("/"))
+        {
+            return valor;
+        }
+        return $"/uploads/products/{valor}";
     }
 }

@@ -1,0 +1,213 @@
+@page "/SpecialOffer/Create"
+@attribute [Authorize(Roles = "Admin, ProductionManager")]
+
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject SpecialOfferService specialOfferService
+@inject ToastService toastService
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Crear Oferta Especial</PageTitle>
+
+<div class="specialoffer-create-container">
+
+    <!-- HEADER -->
+    <div class="specialoffer-create-header">
+        <div>
+            <h3>Nueva Oferta Especial</h3>
+            <span>Registro de promociones y descuentos</span>
+        </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="specialoffer-create-form">
+        <EditForm Model="Offer" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-lg">
+                <div class="card-body">
+
+                    <!-- SECCIÓN -->
+                    <h5 class="section-title">
+                        <i class="bi bi-percent"></i> Información de la Oferta
+                    </h5>
+
+                    <!-- DESCRIPCIÓN -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Descripción del Descuento</strong>
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="Offer.Description"
+                                   placeholder="Ej: Rebaja de Verano 2026" />
+
+                        <ValidationMessage For="(() => Offer.Description)" />
+                    </div>
+
+                    <!-- DESCUENTO -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>% Descuento (Decimal: 0.15 = 15%)</strong>
+                        </label>
+
+                        <InputNumber class="form-control"
+                                     step="0.01"
+                                     @bind-Value="Offer.DiscountPct" />
+
+                        <ValidationMessage For="(() => Offer.DiscountPct)" />
+                    </div>
+
+                    <!-- TIPO -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Tipo de Oferta</strong>
+                        </label>
+
+                        <InputSelect class="form-select" @bind-Value="Offer.Type">
+                            <option value="">Seleccione...</option>
+                            <option value="Sin Descuento">Sin Descuento</option>
+                            <option value="Descuento por Volumen">Descuento por Volumen</option>
+                            <option value="Oferta de Temporada">Oferta de Temporada</option>
+                            <option value="Producto Descontinuado">Producto Descontinuado</option>
+                            <option value="Exceso de Inventario">Exceso de Inventario</option>
+                            <option value="Nuevo Producto">Nuevo Producto</option>
+                        </InputSelect>
+
+                        <ValidationMessage For="(() => Offer.Type)" />
+                    </div>
+
+                    <!-- CATEGORÍA -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Categoría</strong>
+                        </label>
+
+                        <InputSelect class="form-select" @bind-Value="Offer.Category">
+                            <option value="">Seleccione...</option>
+                            <option value="Customer">Customer</option>
+                            <option value="Pre Seller">Pre Seller</option>
+                        </InputSelect>
+
+                        <ValidationMessage For="(() => Offer.Category)" />
+                    </div>
+
+                    <!-- FECHAS -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <strong>Fecha Inicio</strong>
+                            </label>
+
+                            <InputDate class="form-control" @bind-Value="Offer.StartDate" />
+                            <ValidationMessage For="(() => Offer.StartDate)" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <strong>Fecha Fin</strong>
+                            </label>
+
+                            <InputDate class="form-control" @bind-Value="Offer.EndDate" />
+                            <ValidationMessage For="(() => Offer.EndDate)" />
+                        </div>
+                    </div>
+
+                    <!-- CANTIDADES -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <strong>Cantidad Mínima</strong>
+                            </label>
+
+                            <InputNumber class="form-control" @bind-Value="Offer.MinQty" />
+                            <ValidationMessage For="(() => Offer.MinQty)" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                <strong>Cantidad Máxima</strong>
+                            </label>
+
+                            <InputNumber class="form-control" @bind-Value="Offer.MaxQty" />
+                            <ValidationMessage For="(() => Offer.MaxQty)" />
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="card-footer text-center">
+
+                    <a class="btn btn-secondary bi bi-arrow-left" href="/SpecialOffer/Index">
+                        Volver
+                    </a>
+
+                    <button class="btn btn-primary bi bi-floppy" type="submit">
+                        Guardar
+                    </button>
+
+                </div>
+            </div>
+        </EditForm>
+    </div>
+
+</div>
+
+@code {
+    public SpecialOffer Offer { get; set; } = new SpecialOffer
+    {
+        StartDate = DateTime.Now,
+        EndDate = DateTime.Now.AddMonths(1),
+        MinQty = 0,
+        ModifiedDate = DateTime.Now,
+        Rowguid = Guid.NewGuid()
+    };
+
+    // Variable intermedia: el usuario ingresa en % natural (ej: 15 para 15%)
+    // Se convierte a decimal (0.15) antes de guardar en BD
+    private decimal DiscountPorcentaje { get; set; } = 0;
+
+    public async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(Offer.Description))
+        {
+            toastService.ShowWarning("Debe ingresar una descripción para la oferta.");
+            return;
+        }
+
+        if (Offer.EndDate <= Offer.StartDate)
+        {
+            toastService.ShowWarning("LA FECHA DE FIN DEBE SER MAYOR A LA DE INICIO.");
+            return;
+        }
+
+        if (Offer.MaxQty.HasValue && Offer.MaxQty < Offer.MinQty)
+        {
+            toastService.ShowWarning("La cantidad máxima no puede ser menor a la mínima.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Offer.Type) || string.IsNullOrWhiteSpace(Offer.Category))
+        {
+            toastService.ShowWarning("Debe seleccionar un Tipo y una Categoría.");
+            return;
+        }
+
+        // Convertir % natural (ej: 15) a decimal de BD (ej: 0.15)
+        Offer.DiscountPct = DiscountPorcentaje / 100;
+
+        if (await specialOfferService.Guardar(Offer))
+        {
+            toastService.ShowSuccess("Oferta guardada correctamente."); 
+            navigationManager.NavigateTo("/SpecialOffer/Index");
+        }
+        else
+        {
+            toastService.ShowError("Error al guardar en la base de datos.");
+            toastService.ShowError("Error al guardar la oferta.");
+        }
+    }
+}

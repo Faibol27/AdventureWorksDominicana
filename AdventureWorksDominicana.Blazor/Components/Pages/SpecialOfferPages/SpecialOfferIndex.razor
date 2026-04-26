@@ -1,0 +1,148 @@
+﻿@page "/SpecialOffer/Index"
+@attribute [Authorize(Roles = "Admin, ProductionManager")]
+
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Services
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@rendermode InteractiveServer
+@inject SpecialOfferService specialOfferService
+
+<PageTitle>Ofertas Especiales</PageTitle>
+
+<div class="specialoffer-container">
+
+    <!-- HEADER -->
+    <div class="specialoffer-header">
+        <div>
+            <h3>Ofertas Especiales</h3>
+            <span>Gestión de promociones y descuentos</span>
+        </div>
+
+        <a href="/SpecialOffer/Create" class="btn btn-primary">
+            <i class="bi bi-plus-square"></i> Crear
+        </a>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="specialoffer-filters">
+        <div class="row g-3">
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Desde</label>
+                <input class="form-control" type="date" @bind="StartDate" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Hasta</label>
+                <input class="form-control" type="date" @bind="EndDate" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Filtro</label>
+                <select class="form-select" @bind="Filtro">
+                    <option value="">Seleccione...</option>
+                    <option value="Descripcion">Descripción</option>
+                    <option value="Tipo">Tipo de Oferta</option>
+                    <option value="Categoria">Categoría</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Buscar</label>
+                <div class="input-group">
+                    <input class="form-control" @bind="ValorFiltro" placeholder="Buscar..." />
+
+                    <button class="btn btn-primary" @onclick="Buscar">
+                        <i class="bi bi-search"></i>
+                    </button>
+
+                    <button class="btn btn-outline-primary" @onclick="Restablecer">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="table-responsive specialoffer-table">
+
+        <QuickGrid Items="OffersList.AsQueryable()"
+                   Pagination="@pages"
+                   Class="table table-hover">
+
+            <PropertyColumn Property="@(s => s.Description)" Title="Descripción" />
+            <PropertyColumn Property="@(s => s.Type)" Title="Tipo" />
+            <PropertyColumn Property="@(s => s.Category)" Title="Categoría" />
+
+            <TemplateColumn Title="Descuento">
+                @((context.DiscountPct * 100).ToString("N0")) %
+            </TemplateColumn>
+
+            <PropertyColumn Property="@(s => s.StartDate)" Format="dd/MM/yyyy" Title="Inicio" />
+            <PropertyColumn Property="@(s => s.EndDate)" Format="dd/MM/yyyy" Title="Fin" />
+
+            <TemplateColumn Title="Estado" Class="text-center">
+                @if (context.EndDate >= DateTime.Now && context.StartDate <= DateTime.Now)
+                {
+                    <span class="badge bg-success">Vigente</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Inactiva</span>
+                }
+            </TemplateColumn>
+
+            <TemplateColumn Title="Acciones" Class="text-center">
+                <a href="/SpecialOffer/Edit/@context.SpecialOfferId"
+                       class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Modificar
+                </a>
+            </TemplateColumn>
+
+        </QuickGrid>
+
+        <Paginator State="@pages" />
+
+    </div>
+
+</div>
+
+@code {
+    private List<SpecialOffer> OffersList = new List<SpecialOffer>();
+    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+    private string Filtro = string.Empty;
+    private string ValorFiltro = string.Empty;
+    private DateTime? StartDate = null;
+    private DateTime? EndDate = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        OffersList = await specialOfferService.GetList(s =>
+            (!(StartDate.HasValue && EndDate.HasValue) ||
+            (s.StartDate >= StartDate.Value.Date && s.StartDate <= EndDate.Value.Date.AddDays(1).AddTicks(-1)))
+            &&
+            (string.IsNullOrWhiteSpace(ValorFiltro) || string.IsNullOrWhiteSpace(Filtro) ||
+                (Filtro == "Descripcion" && s.Description.Contains(ValorFiltro)) ||
+                (Filtro == "Tipo" && s.Type.Contains(ValorFiltro)) ||
+                (Filtro == "Categoria" && s.Category.Contains(ValorFiltro))
+            )
+        );
+    }
+
+    private async Task Restablecer()
+    {
+        StartDate = null;
+        EndDate = null;
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        await Buscar();
+    }
+}

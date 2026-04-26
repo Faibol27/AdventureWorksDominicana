@@ -82,7 +82,7 @@ public class PersonService(IDbContextFactory<Contexto> DbFactory) : IService<Per
         await using var contexto = await DbFactory.CreateDbContextAsync();
 
         return await contexto.People
-            .Where(criterio)
+            .Where(criterio).Include(a => a.EmailAddresses)
             .AsNoTracking()
             .ToListAsync();
     }
@@ -106,4 +106,142 @@ public class PersonService(IDbContextFactory<Contexto> DbFactory) : IService<Per
             .ThenBy(p => p.LastName)
             .ToListAsync();
     }
+
+    public async Task<Person?> BuscarPorEmailCompleto(string email)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        return await contexto.People
+            .AsNoTracking()
+            .Include(p => p.EmailAddresses)
+            .Include(p => p.PersonPhones)
+            .FirstOrDefaultAsync(p => p.EmailAddresses.Any(e => e.EmailAddress1 == email));
+    }
+    public async Task<bool> ActualizarPerfilCompleto(int id, Person datosNuevos)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        // Aquí busco la persona con sus relaciones actuales y activando el Tracking
+        var personaDB = await contexto.People
+            .Include(p => p.EmailAddresses)
+            .Include(p => p.PersonPhones)
+            .FirstOrDefaultAsync(p => p.BusinessEntityId == id);
+
+        if (personaDB == null) return false;
+
+        // Actualizo datos 
+        personaDB.FirstName = datosNuevos.FirstName;
+        personaDB.MiddleName = datosNuevos.MiddleName;
+        personaDB.LastName = datosNuevos.LastName;
+        personaDB.EmailPromotion = datosNuevos.EmailPromotion;
+        personaDB.ModifiedDate = DateTime.Now;
+
+        // sINCRONIZO correos electronicos
+        contexto.EmailAddresses.RemoveRange(personaDB.EmailAddresses);
+
+        foreach (var email in datosNuevos.EmailAddresses)
+        {
+            personaDB.EmailAddresses.Add(new EmailAddress
+            {
+                BusinessEntityId = id,
+                EmailAddress1 = email.EmailAddress1,
+                Rowguid = Guid.NewGuid(),
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        // Sincronizo teléfonos
+        contexto.PersonPhones.RemoveRange(personaDB.PersonPhones);
+
+        foreach (var phone in datosNuevos.PersonPhones)
+        {
+            personaDB.PersonPhones.Add(new PersonPhone
+            {
+                BusinessEntityId = id,
+                PhoneNumber = phone.PhoneNumber,
+                PhoneNumberTypeId = phone.PhoneNumberTypeId,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        // Guardo todos los cambios
+        return await contexto.SaveChangesAsync() > 0;
+    }
+
+    public async Task<List<PersonCreditCard>> ObtenerTarjetasPorPersonaId(int businessEntityId)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        return await contexto.PersonCreditCards
+            .AsNoTracking()
+            .Include(pcc => pcc.CreditCard) 
+            .Where(pcc => pcc.BusinessEntityId == businessEntityId)
+            .ToListAsync();
+    }
+
+    public async Task<bool> AgregarTarjetaAPersona(int businessEntityId, CreditCard nuevaTarjeta)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        var existePersona = await contexto.People
+            .AnyAsync(p => p.BusinessEntityId == businessEntityId);
+
+        if (!existePersona) return false;
+
+        nuevaTarjeta.ModifiedDate = DateTime.Now;
+
+        var personCreditCard = new PersonCreditCard
+        {
+            BusinessEntityId = businessEntityId,
+            CreditCard = nuevaTarjeta,
+            ModifiedDate = DateTime.Now
+        };
+
+        contexto.PersonCreditCards.Add(personCreditCard);
+
+        return await contexto.SaveChangesAsync() > 0;
+    }
+
+    public async Task<bool> EliminarTarjetaDePersona(int businessEntityId, int creditCardId)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+
+        var vinculoTarjeta = await contexto.PersonCreditCards
+            .FirstOrDefaultAsync(pcc => pcc.BusinessEntityId == businessEntityId && pcc.CreditCardId == creditCardId);
+
+        if (vinculoTarjeta == null) return false;
+
+        contexto.PersonCreditCards.Remove(vinculoTarjeta);
+
+        return await contexto.SaveChangesAsync() > 0;
+    }
+
+    public bool EsCedulaValida(string cedula)
+    {
+        //ALGORITMO FUNCIONAL DE VALIDACION DE CEDULA DOMINICANA.
+        if (string.IsNullOrWhiteSpace(cedula)) return false;
+
+        cedula = cedula.Replace("-", "").Replace(" ", "");
+
+        if (cedula.Length != 11 || !long.TryParse(cedula, out _)) return false;
+
+        int suma = 0;
+        int[] pesos = { 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+
+        for (int i = 0; i < 10; i++)
+        {
+            int digito = int.Parse(cedula[i].ToString()) * pesos[i];
+
+            if (digito > 9)
+                digito = (digito / 10) + (digito % 10);
+
+            suma += digito;
+        }
+
+        int verificadorCalculado = (10 - (suma % 10)) % 10;
+        int verificadorReal = int.Parse(cedula[10].ToString());
+
+        return verificadorCalculado == verificadorReal;
+    }
+
 }

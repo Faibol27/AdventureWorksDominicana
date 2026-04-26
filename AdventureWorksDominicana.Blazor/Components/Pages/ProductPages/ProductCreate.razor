@@ -1,4 +1,7 @@
-﻿@page "/Product/Create"
+@page "/Product/Create"
+@attribute [Authorize(Roles = "Admin, ProductionManager")]
+
+@rendermode InteractiveServer
 
 @inject ProductService productService
 @inject ProductSubcategoryService productSubcategoryService
@@ -6,233 +9,400 @@
 @inject UnitMeasureService unitMeasureService
 @inject ToastService toastService
 @inject NavigationManager navigationManager
-@rendermode InteractiveServer
+@inject SpecialOfferProductService specialOfferProductService
+@inject SpecialOfferService specialOfferService
+@inject ProductPhotoService photoService
 
-<EditForm Model="Product" FormName="FormularioProduct" OnValidSubmit="Guardar">
-    <DataAnnotationsValidator />
+<PageTitle>Crear Producto</PageTitle>
 
-    <div class="container">
-        <div class="card shadow-lg">
-            <div class="card-header text-center">
-                <h3>Crear Product</h3>
-            </div>
-
-            <div class="card-body">
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Nombre</strong></label>
-                    <input class="form-control" type="text" @bind-value="Product.Name" />
-                    <ValidationMessage For="(() => Product.Name)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Número de producto</strong></label>
-                    <input class="form-control" type="text" @bind-value="Product.ProductNumber" />
-                    <ValidationMessage For="(() => Product.ProductNumber)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Fabricación propia (Make)</strong></label>
-                    <input type="checkbox" @bind="Product.MakeFlag" />
-                    <ValidationMessage For="(() => Product.MakeFlag)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Producto terminado / vendible</strong></label>
-                    <input type="checkbox" @bind="Product.FinishedGoodsFlag" />
-                    <ValidationMessage For="(() => Product.FinishedGoodsFlag)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Color</strong></label>
-                    <input class="form-control" type="text" @bind-value="Product.Color" />
-                    <ValidationMessage For="(() => Product.Color)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Stock de seguridad</strong></label>
-                    <input class="form-control" type="number" min="0" @bind-value="Product.SafetyStockLevel" />
-                    <ValidationMessage For="(() => Product.SafetyStockLevel)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Punto de reorden</strong></label>
-                    <input class="form-control" type="number" min="0" @bind-value="Product.ReorderPoint" />
-                    <ValidationMessage For="(() => Product.ReorderPoint)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Costo estándar</strong></label>
-                    <input class="form-control" type="number" min="0" step="0.01" @bind-value="Product.StandardCost" />
-                    <ValidationMessage For="(() => Product.StandardCost)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Precio de lista</strong></label>
-                    <input class="form-control" type="number" min="0" step="0.01" @bind-value="Product.ListPrice" />
-                    <ValidationMessage For="(() => Product.ListPrice)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Tamaño</strong></label>
-                    <input class="form-control" type="text" @bind-value="Product.Size" />
-                    <ValidationMessage For="(() => Product.Size)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Unidad de medida (tamaño)</strong></label>
-                    <InputSelect class="form-select" @bind-Value="Product.SizeUnitMeasureCode">
-                        <option value="">— Ninguna —</option>
-                        @foreach (var u in ListaUnitMeasures)
-                        {
-                            <option value="@u.UnitMeasureCode">@u.Name (@u.UnitMeasureCode)</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.SizeUnitMeasureCode)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Unidad de medida (peso)</strong></label>
-                    <InputSelect class="form-select" @bind-Value="Product.WeightUnitMeasureCode">
-                        <option value="">— Ninguna —</option>
-                        @foreach (var u in ListaUnitMeasures)
-                        {
-                            <option value="@u.UnitMeasureCode">@u.Name (@u.UnitMeasureCode)</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.WeightUnitMeasureCode)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Peso</strong></label>
-                    <input class="form-control" type="number" min="0" step="0.01" @bind-value="Product.Weight" />
-                    <ValidationMessage For="(() => Product.Weight)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Días de fabricación</strong></label>
-                    <input class="form-control" type="number" min="0" @bind-value="Product.DaysToManufacture" />
-                    <ValidationMessage For="(() => Product.DaysToManufacture)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Línea de producto</strong></label>
-                    <InputSelect class="form-select" @bind-Value="Product.ProductLine">
-                        <option value="">—</option>
-                        <option value="R">R — Road</option>
-                        <option value="M">M — Mountain</option>
-                        <option value="T">T — Touring</option>
-                        <option value="S">S — Standard</option>
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.ProductLine)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Clase</strong></label>
-                    <InputSelect class="form-select" @bind-Value="Product.Class">
-                        <option value="">—</option>
-                        <option value="H">H — High</option>
-                        <option value="M">M — Medium</option>
-                        <option value="L">L — Low</option>
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.Class)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Estilo</strong></label>
-                    <InputSelect class="form-select" @bind-Value="Product.Style">
-                        <option value="">—</option>
-                        <option value="W">W — Womens</option>
-                        <option value="M">M — Mens</option>
-                        <option value="U">U — Universal</option>
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.Style)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Subcategoría</strong></label>
-                    <InputSelect class="form-select" TValue="int?" @bind-Value="Product.ProductSubcategoryId">
-                        <option value="">— Ninguna —</option>
-                        @foreach (var s in ListaSubcategorias)
-                        {
-                            <option value="@s.ProductSubcategoryId">@s.Name</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.ProductSubcategoryId)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Modelo de producto</strong></label>
-                    <InputSelect class="form-select" TValue="int?" @bind-Value="Product.ProductModelId">
-                        <option value="">— Ninguno —</option>
-                        @foreach (var m in ListaModelos)
-                        {
-                            <option value="@m.ProductModelId">@m.Name</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="(() => Product.ProductModelId)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Inicio ventas</strong></label>
-                    <input class="form-control" type="datetime-local" @bind-value="Product.SellStartDate" />
-                    <ValidationMessage For="(() => Product.SellStartDate)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Fin ventas</strong></label>
-                    <input class="form-control" type="datetime-local" @bind-value="Product.SellEndDate" />
-                    <ValidationMessage For="(() => Product.SellEndDate)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Fecha discontinuación</strong></label>
-                    <input class="form-control" type="datetime-local" @bind-value="Product.DiscontinuedDate" />
-                    <ValidationMessage For="(() => Product.DiscontinuedDate)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Fecha de modificación</strong></label>
-                    <input class="form-control" type="datetime-local" @bind-value="Product.ModifiedDate" disabled />
-                    <ValidationMessage For="(() => Product.ModifiedDate)" />
-                </div>
-
-            </div>
-
-            <div class="card-footer text-center">
-                <a class="btn btn-secondary bi bi-arrow-left" href="/Product/Index"> Volver</a>
-                <button class="btn btn-primary bi bi-floppy" type="submit"> Guardar</button>
-            </div>
+<div class="product-container">
+    
+    <div class="product-header">
+        <div>
+            <h3>Crear Producto</h3>
+            <span>Registro de nuevos productos en el catálogo</span>
         </div>
     </div>
-</EditForm>
+
+    <div class="product-form">
+        <EditForm Model="Product" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-lg">
+                <div class="card-body">
+
+                    <h5 class="section-title">
+                        <i class="bi bi-info-circle"></i> Información General
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Nombre</strong></label>
+                        <input class="form-control" type="text" @bind="Product.Name" placeholder="Ej: Mountain Bike 1000" />
+                        <ValidationMessage For="(() => Product.Name)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Número de producto</strong></label>
+                        <input class="form-control" type="text" @bind="Product.ProductNumber" placeholder="Ej: MT-1000" />
+                        <ValidationMessage For="(() => Product.ProductNumber)" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" @bind="Product.MakeFlag" id="MakeFlag" />
+                                <label class="form-check-label" for="MakeFlag">Fabricación propia</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" @bind="Product.FinishedGoodsFlag" id="FinishedGoodsFlag" />
+                                <label class="form-check-label" for="FinishedGoodsFlag">Producto terminado</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Color</strong></label>
+                        <input class="form-control" type="text" @bind="Product.Color" placeholder="Ej: Rojo, Negro" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Tamaño</strong></label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" @bind="Product.Size" placeholder="Ej: M, L, XL, 58" />
+                            <select class="form-select" style="max-width: 100px;" @bind="Product.SizeUnitMeasureCode">
+                                <option value="">Unidad</option>
+                                @foreach (var u in ListaUnidades)
+                                {
+                                    <option value="@u.UnitMeasureCode">@u.UnitMeasureCode</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Peso</strong></label>
+                        <div class="input-group">
+                            <input class="form-control" type="number" step="0.01" @bind="Product.Weight" placeholder="0.00" />
+                            <select class="form-select" style="max-width: 100px;" @bind="Product.WeightUnitMeasureCode">
+                                <option value="">Unidad</option>
+                                @foreach (var u in ListaUnidades)
+                                {
+                                    <option value="@u.UnitMeasureCode">@u.UnitMeasureCode</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-currency-dollar"></i> Costos y Precios
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Costo estándar</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">RD$</span>
+                            <input class="form-control" type="number" step="0.01" min="0" @bind="Product.StandardCost" />
+                        </div>
+                        <ValidationMessage For="(() => Product.StandardCost)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Precio de lista</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">RD$</span>
+                            <input class="form-control" type="number" step="0.01" min="0" @bind="Product.ListPrice" />
+                        </div>
+                        <ValidationMessage For="(() => Product.ListPrice)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Días de fabricación</strong></label>
+                        <input class="form-control" type="number" min="0" @bind="Product.DaysToManufacture" />
+                        <ValidationMessage For="(() => Product.DaysToManufacture)" />
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-box-seam"></i> Inventario
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Stock de seguridad</strong></label>
+                        <input class="form-control" type="number" min="0" @bind="Product.SafetyStockLevel" />
+                        <ValidationMessage For="(() => Product.SafetyStockLevel)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Punto de reorden</strong></label>
+                        <input class="form-control" type="number" min="0" @bind="Product.ReorderPoint" />
+                        <ValidationMessage For="(() => Product.ReorderPoint)" />
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-tags"></i> Clasificación
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Línea de producto</strong></label>
+                        <select class="form-select" @bind="Product.ProductLine">
+                            <option value="">— Seleccione —</option>
+                            <option value="R">Road (R)</option>
+                            <option value="M">Mountain (M)</option>
+                            <option value="T">Touring (T)</option>
+                            <option value="S">Standard (S)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Clase</strong></label>
+                        <select class="form-select" @bind="Product.Class">
+                            <option value="">— Seleccione —</option>
+                            <option value="H">High (H)</option>
+                            <option value="M">Medium (M)</option>
+                            <option value="L">Low (L)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Estilo</strong></label>
+                        <select class="form-select" @bind="Product.Style">
+                            <option value="">— Seleccione —</option>
+                            <option value="W">Women's (W)</option>
+                            <option value="M">Men's (M)</option>
+                            <option value="U">Universal (U)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Subcategoría</strong></label>
+                        <select class="form-select" @bind="Product.ProductSubcategoryId">
+                            <option value="">— Ninguna —</option>
+                            @foreach (var s in ListaSubcategorias)
+                            {
+                                <option value="@s.ProductSubcategoryId">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Modelo de producto</strong></label>
+                        <select class="form-select" @bind="Product.ProductModelId">
+                            <option value="">— Ninguno —</option>
+                            @foreach (var m in ListaModelos)
+                            {
+                                <option value="@m.ProductModelId">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-calendar-event"></i> Fechas
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Inicio de venta</strong></label>
+                        <input class="form-control" type="datetime-local" @bind="Product.SellStartDate" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Fin de venta</strong></label>
+                        <input class="form-control" type="datetime-local" @bind="Product.SellEndDate" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Fecha de descontinuación</strong></label>
+                        <input class="form-control" type="datetime-local" @bind="Product.DiscontinuedDate" />
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-camera"></i> Fotografía Principal
+                    </h5>
+
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            @if (!string.IsNullOrWhiteSpace(UrlImagenPreview))
+                            {
+                                <img src="@UrlImagenPreview" class="product-preview-img" />
+                            }
+                            else
+                            {
+                                <div class="product-preview-placeholder">
+                                    <i class="bi bi-image fs-1 text-muted"></i>
+                                    <p class="mb-0 text-muted small">Sin imagen seleccionada</p>
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label"><strong>URL o ruta de imagen</strong></label>
+                            <input class="form-control" type="text" @bind="RutaImagenManual" placeholder="Ej: https://sitio.com/imagen.png o iphone.png" />
+                            <small class="text-muted mt-2 d-block">Puedes poner una URL completa o un nombre de archivo/ruta guardada.</small>
+
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="PrevisualizarRuta">Previsualizar</button>
+                                <button type="button" class="btn btn-outline-primary" @onclick="GuardarRutaTemporal">Usar imagen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="section-title mt-4">
+                        <i class="bi bi-percent"></i> Promociones Aplicadas
+                    </h5>
+
+                    <div class="border p-3 mb-3">
+                        <h5 class="mb-3">Asignar Oferta</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-9">
+                                <select class="form-select" @bind="OfertaSeleccionadaId">
+                                    <option value="0">— Seleccione una oferta —</option>
+                                    @foreach (var off in TodasLasOfertas)
+                                    {
+                                        <option value="@off.SpecialOfferId">
+                                            @off.Description (@((off.DiscountPct * 100).ToString("N0"))% · hasta @off.EndDate.ToShortDateString())
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-primary bi bi-plus" @onclick="AgregarOferta"> Agregar</button>
+                            </div>
+                        </div>
+
+                        <QuickGrid Items="OfertasSeleccionadas.AsQueryable()" Class="table table-striped table-bordered table-hover">
+                            <PropertyColumn Property="@(o => o.Description)" Title="Oferta" />
+                            <TemplateColumn Title="Descuento">
+                                <ChildContent Context="det">
+                                    @((det.DiscountPct * 100).ToString("N0"))%
+                                </ChildContent>
+                            </TemplateColumn>
+                            <PropertyColumn Property="@(o => o.EndDate)" Format="dd/MM/yyyy" Title="Vence" />
+                            <TemplateColumn>
+                                <ChildContent Context="det">
+                                    <button type="button" class="btn btn-outline-dark btn-sm bi bi-trash" @onclick="(() => RemoverOferta(det))"> Eliminar</button>
+                                </ChildContent>
+                            </TemplateColumn>
+                        </QuickGrid>
+                    </div>
+
+                    <div class="mt-2 fw-bold">
+                        Ofertas a aplicar: @OfertasSeleccionadas.Count
+                    </div>
+
+                </div>
+
+                <div class="card-footer text-center">
+                    <a class="btn btn-secondary bi bi-arrow-left" href="/Product/Index"> Volver</a>
+                    <button class="btn btn-primary bi bi-floppy" type="submit"> Guardar</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
 
 @code {
     public Product Product { get; set; } = new();
-
     public List<ProductSubcategory> ListaSubcategorias { get; set; } = new();
     public List<ProductModel> ListaModelos { get; set; } = new();
-    public List<UnitMeasure> ListaUnitMeasures { get; set; } = new();
+    public List<UnitMeasure> ListaUnidades { get; set; } = new();
+
+    public List<SpecialOffer> TodasLasOfertas { get; set; } = new();
+    public List<SpecialOffer> OfertasSeleccionadas { get; set; } = new();
+    public int OfertaSeleccionadaId { get; set; } = 0;
+
+    private string? UrlImagenPreview;
+    private string? RutaImagenManual;
+    private string? RutaImagenParaGuardar;
 
     protected override async Task OnInitializedAsync()
     {
-        Product.ModifiedDate = DateTime.Now;
-        Product.SellStartDate = DateTime.Now;
-        Product.MakeFlag = false;
+        Product.MakeFlag = true;
         Product.FinishedGoodsFlag = true;
+        Product.SafetyStockLevel = 1000;
+        Product.ReorderPoint = 750;
+        Product.DaysToManufacture = 0;
+        Product.StandardCost = 0;
+        Product.ListPrice = 0;
+        Product.SellStartDate = DateTime.Now;
+        Product.ModifiedDate = DateTime.Now;
+        Product.Rowguid = Guid.NewGuid();
 
-        ListaSubcategorias = await productSubcategoryService.GetList(x => true);
-        ListaModelos = await productModelService.GetList(x => true);
-        ListaUnitMeasures = await unitMeasureService.GetList(x => true);
+        ListaSubcategorias = await productSubcategoryService.GetList(s => s.ProductSubcategoryId > 0);
+        ListaModelos = await productModelService.GetList(m => m.ProductModelId > 0);
+        ListaUnidades = await unitMeasureService.GetList(u => true);
+        TodasLasOfertas = await specialOfferService.GetList(o => o.SpecialOfferId > 0);
+    }
+
+    private string ResolverRutaImagen(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        if (valor.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("/"))
+        {
+            return valor;
+        }
+
+        return $"/uploads/products/{valor}";
+    }
+
+    private Task PrevisualizarRuta()
+    {
+        if (string.IsNullOrWhiteSpace(RutaImagenManual))
+        {
+            toastService.ShowWarning("Escribe una URL o una ruta.");
+            return Task.CompletedTask;
+        }
+
+        UrlImagenPreview = ResolverRutaImagen(RutaImagenManual.Trim());
+        return Task.CompletedTask;
+    }
+
+    private Task GuardarRutaTemporal()
+    {
+        if (string.IsNullOrWhiteSpace(RutaImagenManual))
+        {
+            toastService.ShowWarning("Escribe una URL o una ruta.");
+            return Task.CompletedTask;
+        }
+
+        RutaImagenParaGuardar = RutaImagenManual.Trim();
+        UrlImagenPreview = ResolverRutaImagen(RutaImagenParaGuardar);
+        toastService.ShowSuccess("Imagen preparada para guardar.");
+        return Task.CompletedTask;
+    }
+
+    private void AgregarOferta()
+    {
+        if (OfertaSeleccionadaId == 0) return;
+
+        var oferta = TodasLasOfertas.FirstOrDefault(o => o.SpecialOfferId == OfertaSeleccionadaId);
+        if (oferta == null) return;
+
+        if (OfertasSeleccionadas.Any(o => o.SpecialOfferId == OfertaSeleccionadaId))
+        {
+            toastService.ShowWarning("Esta oferta ya está en la lista.");
+            return;
+        }
+
+        OfertasSeleccionadas.Add(oferta);
+        OfertaSeleccionadaId = 0;
+    }
+
+    private void RemoverOferta(SpecialOffer oferta)
+    {
+        OfertasSeleccionadas.Remove(oferta);
     }
 
     public async Task Guardar()
     {
-        Product.SizeUnitMeasureCode = string.IsNullOrWhiteSpace(Product.SizeUnitMeasureCode) ? null : Product.SizeUnitMeasureCode;
         Product.WeightUnitMeasureCode = string.IsNullOrWhiteSpace(Product.WeightUnitMeasureCode) ? null : Product.WeightUnitMeasureCode;
+        Product.SizeUnitMeasureCode = string.IsNullOrWhiteSpace(Product.SizeUnitMeasureCode) ? null : Product.SizeUnitMeasureCode;
         Product.ProductLine = string.IsNullOrWhiteSpace(Product.ProductLine) ? null : Product.ProductLine;
         Product.Class = string.IsNullOrWhiteSpace(Product.Class) ? null : Product.Class;
         Product.Style = string.IsNullOrWhiteSpace(Product.Style) ? null : Product.Style;
+        Product.ModifiedDate = DateTime.Now;
 
         var duplicado = await productService.GetList(p =>
             (p.Name.ToLower().Trim() == Product.Name.ToLower().Trim()
@@ -247,14 +417,27 @@
 
         bool guardado = await productService.Guardar(Product);
 
-        if (guardado)
+        if (!guardado)
         {
-            toastService.ShowSuccess("El producto fue creado exitosamente.");
-            navigationManager.NavigateTo("/Product/Index");
+            toastService.ShowError("Ha ocurrido un error inesperado al guardar el producto.");
+            return;
         }
-        else
+
+        if (!string.IsNullOrWhiteSpace(RutaImagenParaGuardar))
         {
-            toastService.ShowError("Ha ocurrido un error al guardar el producto.");
+            await photoService.AsignarFotoPrincipal(Product.ProductId, RutaImagenParaGuardar);
         }
+
+        foreach (var oferta in OfertasSeleccionadas)
+        {
+            await specialOfferProductService.Guardar(new SpecialOfferProduct
+            {
+                ProductId = Product.ProductId,
+                SpecialOfferId = oferta.SpecialOfferId
+            });
+        }
+
+        toastService.ShowSuccess("Producto creado exitosamente.");
+        navigationManager.NavigateTo("/Product/Index");
     }
 }

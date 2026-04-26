@@ -1,72 +1,98 @@
 ﻿@page "/Order/Review/{SalesOrderId:int}"
+@attribute [Authorize(Roles = "Admin, Customer, SalesManager")]
 @rendermode InteractiveServer
 @inject SalesOrderHeaderService salesOrderHeaderService
+@inject ProductService productService
 @inject NavigationManager navigationManager
-@inject ToastService toastService
+
 <PageTitle>Order Review</PageTitle>
-<div class="">
-    <div class="shopping-container">
-        @*Header*@
-        <div class="shopping-header">
-            <div class="shopping-header-logo">
-                <i class="btn btn-primary bi bi-arrow-left" @onclick="GoToOrders"></i>
-                <img src="/AdventureLogo.png" alt="AdventureWorksDominicana Logo" />
-                <h4 class="card-title">Order Review</h4>
-            </div>
+
+<div class="review-container">
+    <div class="review-topbar">
+        <button class="btn btn-light" @onclick="GoToOrders">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="review-title">
+            <h4>Order #@SalesOrderHeaders.SalesOrderId</h4>
+            <span>@(SalesOrderHeaders.ShipDate?.ToString("dd MMM yyyy") ?? "Sin fecha")</span>
         </div>
-        <div class="shopping-body">
-            <div class="shopping-products">
-                @foreach (var s in SalesOrderHeaders.SalesOrderDetails)
-                {
-                    <div class="shopping-product-card">
-                        <div class="shopping-product-img">
-                            <img src="https://www.svgrepo.com/show/486796/product-management.svg" alt="Product Image" />
-                            <span>@s.SpecialOfferProduct.Product.Color</span>
-                        </div>
-                        <div class="shopping-product-info">
-                            <div class="shopping-product-header">
-                                <span>@(s.SpecialOfferProduct.Product.ProductSubcategory?.ProductCategory?.Name ?? "N/A")</span>
-                            </div>
-                            <div>
-                                <p>@s.SpecialOfferProduct.Product.Name</p>
-                            </div>
-                            <div class="quantity-product-action">
-                                <span>@s.OrderQty</span>
-                            </div>
-                            <div>
-                                <span>RD$ @s.LineTotal.ToString("N2")</span>
-                            </div>
+    </div>
+
+    <div class="review-body">
+        <div class="review-products">
+            @foreach (var s in SalesOrderHeaders.SalesOrderDetails)
+            {
+                <div class="review-product-card">
+                    <div class="cart-item-img">
+                        @{
+                            Product product = s.SpecialOfferProduct.Product;
+                            var nexoFoto = product.ProductProductPhotos.FirstOrDefault(f => f.Primary == true);
+                            string imgUrl = ResolverRutaImagen(nexoFoto?.ProductPhoto?.LargePhotoFileName);
+                        }
+                        <img src="@imgUrl" alt="@product.Name" style="object-fit: cover; width: 100%; height: 100%; border-radius: 8px;" />
+                        @if (!string.IsNullOrWhiteSpace(product.Color))
+                        {
+                            <span>@product.Color</span>
+                        }
+                    </div>
+                    <div class="review-product-info">
+                        <span class="category">
+                            @(s.SpecialOfferProduct.Product.ProductSubcategory?.ProductCategory?.Name ?? "N/A")
+                        </span>
+                        <p class="name">@s.SpecialOfferProduct.Product.Name</p>
+                        <div class="details">
+                            <span>Cant: @s.OrderQty</span>
+                            <span>RD$ @s.LineTotal.ToString("N2")</span>
                         </div>
                     </div>
-                }
-            </div>
-            <div class="balance-general">
-                <p>Contabilidad</p>
-                <hr />
-                <div>
-                    <span>Impuestos:</span>
-                    <span>RD$@SalesOrderHeaders.TaxAmt.ToString("N2")</span>
-                    <span>Flete:</span>
-                    <span>RD$@SalesOrderHeaders.Freight.ToString("N2")</span>
-                    <span>Subtotal:</span>
-                    <span>RD$@SalesOrderHeaders.SubTotal.ToString("N2")</span>
-                    <span>Total:</span>
-                    <span>RD$@SalesOrderHeaders.TotalDue.ToString("N2")</span>
                 </div>
+            }
+        </div>
+
+        <div class="review-summary">
+            <h5>Resumen</h5>
+            <div class="summary-item">
+                <span>Subtotal</span>
+                <span>RD$ @SalesOrderHeaders.SubTotal.ToString("N2")</span>
+            </div>
+            <div class="summary-item">
+                <span>Impuestos</span>
+                <span>RD$ @SalesOrderHeaders.TaxAmt.ToString("N2")</span>
+            </div>
+            <div class="summary-item">
+                <span>Envio</span>
+                <span>RD$ @SalesOrderHeaders.Freight.ToString("N2")</span>
+            </div>
+            <hr />
+            <div class="summary-total">
+                <span>Total</span>
+                <span>RD$ @SalesOrderHeaders.TotalDue.ToString("N2")</span>
             </div>
         </div>
     </div>
-    
 </div>
 
 @code {
     [Parameter]
     public int SalesOrderId { get; set; }
-    private SalesOrderHeader SalesOrderHeaders = new SalesOrderHeader();
+    private SalesOrderHeader SalesOrderHeaders = new();
 
     protected override async Task OnInitializedAsync()
     {
         SalesOrderHeaders = await salesOrderHeaderService.Buscar(SalesOrderId);
+    }
+
+    private string ResolverRutaImagen(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "https://www.svgrepo.com/show/486796/product-management.svg";
+        if (valor.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            valor.StartsWith("/"))
+        {
+            return valor;
+        }
+        return $"/uploads/products/{valor}";
     }
 
     private void GoToOrders() => navigationManager.NavigateTo("/Orders");

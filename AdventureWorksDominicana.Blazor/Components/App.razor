@@ -12,10 +12,12 @@
 
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link rel="stylesheet" href="@Assets["AdventureWorksDominicana.Blazor.styles.css"]" />
+    
+    <link rel="stylesheet" href="AdventureWorksDominicana.Blazor.styles.css" />
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <ImportMap />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/png" href="AW.png" />
     <HeadOutlet />
 </head>
 <body>
@@ -28,5 +30,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.0.1/chart.umd.js" integrity="sha512-gQhCDsnnnUfaRzD8k1L5llCCV6O9HN09zClIzzeJ8OJ9MpGmIlCxm+pdCkqTwqJ4JcjbojFr79rl2F1mzcoLMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" integrity="sha512-JPcRR8yFa8mmCsfrw4TNte1ZvF1e3+1SdGMslZvmrzDYxS69J7J49vkFL8u6u8PlPJK+H3voElBtUCzaXj+6ig==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script></body>
+    <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+    <script>
+        window.descargarArchivo = (fileName, base64String) => {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = "data:text/plain;base64," + base64String;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        };
+    </script>
+</body>
 </html>

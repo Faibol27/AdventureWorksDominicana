@@ -1,154 +1,172 @@
 ﻿@page "/Product/Index"
+@attribute [Authorize(Roles = "Admin, ProductionManager, SalesManager")]
 
-@inject NavigationManager navigationManager
 @inject ProductService productService
+@inject AuthenticationStateProvider AuthStateProvider
+
 @rendermode InteractiveServer
 
-<PageTitle>Product</PageTitle>
+<div class="product-container">
 
-<div class="container-fluid">
-    <div class="card shadow-lg">
-        <div class="card-header d-flex justify-content-between align-content-center">
-            <h3 class="mb-0">Product</h3>
-            <a class="btn btn-primary" href="/Product/Create"><i class="bi bi-plus-square"></i> Crear</a>
+    <div class="product-header">
+        <div>
+            <h3>Productos</h3>
+            <span>Gestion y consulta de catalogo</span>
         </div>
 
-        <div class="card-body">
-            <div class="mb-3">
+        <AuthorizeView Roles="Admin, ProductionManager">
+            <Authorized>
+                <a class="btn btn-primary" href="/Product/Create">
+                    <i class="bi bi-plus-square"></i> Crear
+                </a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 
-                <div class="row">
-                    <div class="col-3">
-                        <label class="form-label">Filtro:</label>
-                    </div>
-                    <div class="col-3">
-                        <label class="form-label">Buscar:</label>
-                    </div>
-                    <div class="col-2">
-                        <label class="form-label">Desde</label>
-                    </div>
-                    <div class="col-3">
-                        <label class="form-label">Hasta</label>
-                    </div>
-                </div>
-
-                <div class="row">
-
-                    <div class="col-3">
-                        <InputSelect class="form-select" @bind-Value="Filtros">
-                            <option disabled value="">Filtrar...</option>
-                            <option value="Id">ID</option>
-                            <option value="Nombre">Nombre</option>
-                            <option value="Numero">Número producto</option>
-                        </InputSelect>
-                    </div>
-
-                    <div class="col-3">
-                        <div class="input-group">
-                            <InputText class="form-control" @bind-Value="ValorFiltro" placeholder="Buscar..." />
-                            <button class="btn btn-primary" @onclick="Buscar">
-                                <i class="bi bi-search"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-primary bi bi-arrow-counterclockwise" @onclick="Restablecer"></button>
-                        </div>
-                    </div>
-                    <div class="col-2">
-                        <InputDate class="form-control" @bind-Value="Desde" />
-                    </div>
-                    <div class="col-2">
-                        <InputDate class="form-control" @bind-Value="Hasta" />
-                    </div>
-                </div>
+    <div class="product-filters">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Desde</label>
+                <input class="form-control" type="datetime-local" @bind="FechaDesde" />
             </div>
 
-            <div class="table-responsive">
-                <QuickGrid Items="ListaProductos" Class="table table-striped table-bordered table-hover">
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Hasta</label>
+                <input class="form-control" type="datetime-local" @bind="FechaHasta" />
+            </div>
 
-                    <PropertyColumn Property="@(e => e.ProductId)" Sortable="true" Title="ID" />
-                    <PropertyColumn Property="@(e => e.Name)" Sortable="true" Title="Nombre" />
-                    <PropertyColumn Property="@(e => e.ProductNumber)" Sortable="true" Title="Número" />
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Filtro</label>
+                <select class="form-select" @bind="Filtro">
+                    <option value="">Seleccione...</option>
+                    <option value="Nombre">Nombre</option>
+                    <option value="Numero">SKU</option>
+                    <option value="Subcategoria">Subcategoria</option>
+                </select>
+            </div>
 
-                    <TemplateColumn Title="Precio lista">
-                        @context.ListPrice.ToString("C2")
-                    </TemplateColumn>
-
-                    <TemplateColumn Title="Subcategoría">
-                        @(context.ProductSubcategory?.Name ?? "—")
-                    </TemplateColumn>
-
-                    <PropertyColumn Property="@(e => e.ModifiedDate)" Format="dd/MM/yyyy" Title="Fecha de modificación" Sortable="true" />
-
-                    <TemplateColumn Class="text-center align-middle" Title="Acción">
-                        <a class="btn btn-outline-primary btn-" href="/Product/Edit/@context.ProductId">
-                            <i class="bi bi-pencil-square"></i> Modificar
-                        </a>
-                    </TemplateColumn>
-
-                </QuickGrid>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Buscar</label>
+                <div class="input-group">
+                    <input class="form-control" @bind="ValorFiltro" placeholder="Buscar..." />
+                    <button class="btn btn-primary" @onclick="Filtrar">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" @onclick="Restablecer">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div class="card-footer text-end">
-            <strong>Conteo Registros: </strong> @ListaProductos.Count()
-        </div>
+    <div class="table-responsive product-table">
+
+        <QuickGrid Class="table table-hover" Items="ListaProducts.AsQueryable()" Pagination="@pages" ItemKey="@(p => p.ProductId)">
+
+            <PropertyColumn Property="@(p => p.ProductId)" Title="ID" />
+            <PropertyColumn Property="@(p => p.ProductNumber)" Title="SKU" />
+            <PropertyColumn Property="@(p => p.Name)" Title="Nombre" />
+
+            <TemplateColumn Context="p" Title="Subcategoria">
+                @(p.ProductSubcategory?.Name ?? "N/A")
+            </TemplateColumn>
+
+            <PropertyColumn Property="@(p => p.StandardCost)" Format="C2" Title="Costo" />
+            <PropertyColumn Property="@(p => p.ListPrice)" Format="C2" Title="Precio" />
+
+            <TemplateColumn Context="p" Title="Estado">
+                @if (p.SellEndDate == null)
+                {
+                    <span class="badge bg-success">Activo</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Inactivo</span>
+                }
+            </TemplateColumn>
+
+            @if (canEdit)
+            {
+                <TemplateColumn Class="text-center" Context="p" Title="Acciones">
+                    <a href="/Product/Edit/@p.ProductId" class="btn btn-sm btn-outline-primary">
+                        <span class="bi bi-pencil"></span> Modificar
+                    </a>
+                </TemplateColumn>
+            }
+
+        </QuickGrid>
+
+        <Paginator State="@pages" />
+
     </div>
 </div>
 
 @code {
-    public IQueryable<Product> ListaProductos { get; set; } = Enumerable.Empty<Product>().AsQueryable();
-    public string Filtros { get; set; } = string.Empty;
-    public string ValorFiltro { get; set; } = string.Empty;
-    public DateTime? Desde { get; set; }
-    public DateTime? Hasta { get; set; }
+    public List<Product> ListaProducts { get; set; } = new List<Product>();
+    public DateTime? FechaDesde { get; set; }
+    public DateTime? FechaHasta { get; set; }
+    public string Filtro { get; set; } = "";
+    public string ValorFiltro { get; set; } = "";
+    private PaginationState pages = new PaginationState { ItemsPerPage = 10 };
+    private bool canEdit = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await Buscar();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        canEdit = user.IsInRole("Admin") || user.IsInRole("ProductionManager");
+
+        ListaProducts = await productService.GetListIndex(p => p.ProductId > 0);
+        ListaProducts = ListaProducts.OrderByDescending(p => p.ModifiedDate).ToList();
     }
 
-    public async Task Buscar()
+    public async Task Filtrar()
     {
-        List<Product> listaResultante;
+        Expression<Func<Product, bool>> criterio = p => p.ProductId > 0;
 
-        if (!string.IsNullOrWhiteSpace(ValorFiltro))
+        if (FechaDesde.HasValue && FechaHasta.HasValue)
         {
-            if (Filtros == "Id" && int.TryParse(ValorFiltro, out int id))
-            {
-                listaResultante = await productService.GetList(x => x.ProductId == id);
-            }
-            else if (Filtros == "Nombre")
-            {
-                listaResultante = await productService.GetList(
-                    x => x.Name.ToLower().Contains(ValorFiltro.ToLower()));
-            }
-            else if (Filtros == "Numero")
-            {
-                listaResultante = await productService.GetList(
-                    x => x.ProductNumber.ToLower().Contains(ValorFiltro.ToLower()));
-            }
-            else
-            {
-                listaResultante = await productService.GetList(x => true);
-            }
+            DateTime fechaHastaStr = FechaHasta.Value.Date.AddDays(1).AddTicks(-1);
+            criterio = criterio.And(p => p.ModifiedDate >= FechaDesde.Value && p.ModifiedDate <= fechaHastaStr);
         }
-        else
+        else if (FechaDesde.HasValue)
         {
-            listaResultante = await productService.GetList(x => true);
+            criterio = criterio.And(p => p.ModifiedDate >= FechaDesde.Value);
+        }
+        else if (FechaHasta.HasValue)
+        {
+            var fechaHastaStr = FechaHasta.Value.Date.AddDays(1).AddTicks(-1);
+            criterio = criterio.And(p => p.ModifiedDate <= fechaHastaStr);
         }
 
-        if (Desde.HasValue)
-            listaResultante = listaResultante.Where(x => x.ModifiedDate >= Desde.Value).ToList();
-        if (Hasta.HasValue)
-            listaResultante = listaResultante.Where(x => x.ModifiedDate <= Hasta.Value).ToList();
+        if (!string.IsNullOrEmpty(Filtro) && !string.IsNullOrEmpty(ValorFiltro))
+        {
+            if (Filtro == "Nombre")
+            {
+                criterio = criterio.And(p => p.Name.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
+            else if (Filtro == "Numero")
+            {
+                criterio = criterio.And(p => p.ProductNumber.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
+            else if (Filtro == "Subcategoria")
+            {
+                criterio = criterio.And(p => p.ProductSubcategory != null && p.ProductSubcategory.Name.Trim().ToLower().Contains(ValorFiltro.ToLower()));
+            }
+        }
 
-        ListaProductos = listaResultante.AsQueryable();
+        ListaProducts = await productService.GetListIndex(criterio);
+        ListaProducts = ListaProducts.OrderByDescending(s => s.ModifiedDate).ToList();
     }
 
-    private async Task Restablecer()
+    public async Task Restablecer()
     {
-        Desde = null;
-        Hasta = null;
-        ValorFiltro = string.Empty;
-        Filtros = string.Empty;
-        await Buscar();
+        FechaDesde = null;
+        FechaHasta = null;
+        Filtro = "";
+        ValorFiltro = "";
+        await Filtrar();
     }
 }

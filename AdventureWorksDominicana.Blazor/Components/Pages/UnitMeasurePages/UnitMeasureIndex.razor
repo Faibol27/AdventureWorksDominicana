@@ -1,0 +1,125 @@
+﻿@page "/UnitMeasure/Index"
+@attribute [Authorize(Roles = "Admin, ProductionManager")]
+
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Services
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@rendermode InteractiveServer
+@inject UnitMeasureService unitMeasureService
+
+<PageTitle>Unidades de Medida</PageTitle>
+
+<div class="unitmeasure-container">
+
+    <!-- HEADER -->
+    <div class="unitmeasure-header">
+        <div>
+            <h3>Unidades de Medida</h3>
+            <span>Gestión y consulta de unidades</span>
+        </div>
+
+        <a class="btn btn-primary" href="/UnitMeasure/Create">
+            <i class="bi bi-plus-square"></i> Crear
+        </a>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="unitmeasure-filters">
+        <div class="row g-3">
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Desde</label>
+                <input class="form-control" type="date" @bind="StartDate" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Hasta</label>
+                <input class="form-control" type="date" @bind="EndDate" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Filtro</label>
+                <select class="form-select" @bind="Filtro">
+                    <option value="">Seleccione...</option>
+                    <option value="Codigo">Código</option>
+                    <option value="Nombre">Nombre</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Buscar</label>
+                <div class="input-group">
+                    <input class="form-control" @bind="ValorFiltro" placeholder="Buscar..." />
+
+                    <button class="btn btn-primary" @onclick="Buscar">
+                        <i class="bi bi-search"></i>
+                    </button>
+
+                    <button class="btn btn-outline-primary" @onclick="Restablecer">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="table-responsive unitmeasure-table">
+
+        <QuickGrid Items="UnitsList.AsQueryable()" Pagination="@pages"
+                   Class="table table-hover">
+
+            <PropertyColumn Property="@(u => u.UnitMeasureCode)" Title="Código" />
+            <PropertyColumn Property="@(u => u.Name)" Title="Nombre" />
+            <PropertyColumn Property="@(u => u.ModifiedDate)" Format="dd/MM/yyyy" Title="Fecha" />
+
+            <TemplateColumn Class="text-center" Title="Acciones">
+                <a href="/UnitMeasure/Edit/@context.UnitMeasureCode"
+                       class="btn btn-sm btn-outline-primary">
+                    <span class="bi bi-pencil"></span> Modificar
+                </a>
+            </TemplateColumn>
+
+        </QuickGrid>
+
+        <Paginator State="@pages" />
+
+    </div>
+</div>
+@code {
+    private List<UnitMeasure> UnitsList = new List<UnitMeasure>();
+    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+    private string Filtro = string.Empty;
+    private string ValorFiltro = string.Empty;
+    private DateTime? StartDate = null;
+    private DateTime? EndDate = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        UnitsList = await unitMeasureService.GetList(u =>
+            (!(StartDate.HasValue && EndDate.HasValue) ||
+            (u.ModifiedDate >= StartDate.Value.Date && u.ModifiedDate <= EndDate.Value.Date.AddDays(1).AddTicks(-1)))
+            &&
+            (string.IsNullOrWhiteSpace(ValorFiltro) || string.IsNullOrWhiteSpace(Filtro) ||
+                (Filtro == "Codigo" && u.UnitMeasureCode.Contains(ValorFiltro)) ||
+                (Filtro == "Nombre" && u.Name.Contains(ValorFiltro))
+            )
+        );
+    }
+
+    private async Task Restablecer()
+    {
+        StartDate = null;
+        EndDate = null;
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        await Buscar();
+    }
+}

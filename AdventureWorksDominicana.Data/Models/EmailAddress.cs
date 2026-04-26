@@ -33,6 +33,7 @@ public partial class EmailAddress
     /// </summary>
     [Column("EmailAddress")]
     [StringLength(50)]
+    [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Formato de correo inválido (ejemplo@dominio.com).")]
     public string? EmailAddress1 { get; set; }
 
     /// <summary>

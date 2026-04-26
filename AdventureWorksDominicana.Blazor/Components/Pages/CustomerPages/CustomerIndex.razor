@@ -1,0 +1,221 @@
+﻿@page "/Customer/Index"
+@attribute [Authorize(Roles = "Admin, SalesManager")]
+
+@using AdventureWorksDominicana.Data.Models
+@using AdventureWorksDominicana.Data.Context
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject Contexto contexto
+@inject AdventureWorksDominicana.Services.CustomerService customerService
+@inject ToastService toastService
+@inject NavigationManager navigationManager
+@inject IJSRuntime J
+@rendermode InteractiveServer
+
+<PageTitle>Customers</PageTitle>
+
+<div class="customer-container">
+
+    <!-- HEADER -->
+    <div class="customer-header">
+        <div>
+            <h3>Customers</h3>
+            <span>Gestión y consulta de clientes</span>
+        </div>
+
+        <a class="btn btn-primary" href="/Customer/Create">
+            <i class="bi bi-plus-square"></i> Crear
+        </a>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="customer-filters">
+
+        <div class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label">Desde</label>
+                <InputDate class="form-control" @bind-Value="Desde" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Hasta</label>
+                <InputDate class="form-control" @bind-Value="Hasta" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Filtro</label>
+                <InputSelect class="form-select" @bind-Value="Filtros">
+                    <option disabled value="">Elige un filtro</option>
+                    <option value="Person">Person name</option>
+                    <option value="Store">Store name</option>
+                    <option value="Territory">Territory name</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Buscar</label>
+                <div class="input-group">
+                    <InputText class="form-control"
+                               @bind-Value="ValorFiltro"
+                               placeholder="Buscar..." />
+
+                    <button class="btn btn-primary" @onclick="Buscar">
+                        <i class="bi bi-search"></i>
+                    </button>
+
+                    <button class="btn btn-outline-primary"
+                            @onclick="Restablecer">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- TABLA -->
+    <div class="customer-table">
+
+        @if (ListaCustomers == null)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else if (!ListaCustomers.Any())
+        {
+            <p>No se encontraron customers.</p>
+        }
+        else
+        {
+            <QuickGrid Items="ListaCustomers"
+                       Class="table table-hover"
+                       Pagination="@pages">
+
+                <PropertyColumn Property="@(e => e.CustomerId)"
+                                Sortable="true"
+                                Title="ID" />
+
+                <TemplateColumn Sortable="true" Title="Person">
+                    @if (context.Person != null)
+                    {
+                        @($"{context.Person.FirstName} {context.Person.LastName}")
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </TemplateColumn>
+
+                <TemplateColumn Sortable="true" Title="Store">
+                    @if (context.Store != null)
+                    {
+                        <span>@context.Store.Name</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </TemplateColumn>
+
+                <TemplateColumn Sortable="true" Title="Territory">
+                    @if (context.Territory != null)
+                    {
+                        <span>@context.Territory.Name</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </TemplateColumn>
+
+                <PropertyColumn Property="@(e => e.ModifiedDate)"
+                                Format="dd/MM/yyyy"
+                                Title="Fecha de modificación"
+                                Sortable="true" />
+
+                <TemplateColumn Title="Acción" Class="text-center">
+                    <a class="btn btn-sm btn-outline-primary"
+                           href="/Customer/Edit/@context.CustomerId">
+                        <i class="bi bi-pencil"></i> Modificar
+                    </a>
+                </TemplateColumn>
+
+            </QuickGrid>
+
+            <Paginator State="@pages" />
+        }
+
+    </div>
+</div>
+
+
+@code {
+    private IQueryable<Customer> ListaCustomers = Enumerable.Empty<Customer>().AsQueryable();
+    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+
+    public string Filtros { get; set; } = string.Empty;
+    public string ValorFiltro { get; set; } = string.Empty;
+    public DateTime? Desde { get; set; }
+    public DateTime? Hasta { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await Buscar();
+        }
+        catch (Exception)
+        {
+            toastService.ShowError("Error al cargar customers.");
+        }
+    }
+
+    public async Task Buscar()
+    {
+        List<Customer> resultado;
+
+        if (!string.IsNullOrWhiteSpace(ValorFiltro))
+        {
+            var term = ValorFiltro.ToLower().Trim();
+
+            if (Filtros == "Person")
+            {
+                resultado = await customerService.GetList(x =>
+                    x.Person != null &&
+                    x.Person.FirstName != null &&
+                    x.Person.FirstName.ToLower().Trim().Contains(term));
+            }
+            else if (Filtros == "Store")
+            {
+                resultado = await customerService.GetList(x =>
+                    x.Store != null &&
+                    x.Store.Name != null &&
+                    x.Store.Name.ToLower().Trim().Contains(term));
+            }
+            else
+            {
+                resultado = await customerService.GetList(x => true);
+            }
+        }
+        else
+        {
+            resultado = await customerService.GetList(x => true);
+        }
+        if (Desde.HasValue)
+            resultado = resultado.Where(x => x.ModifiedDate >= Desde.Value).ToList();
+
+        if (Hasta.HasValue)
+            resultado = resultado.Where(x => x.ModifiedDate <= Hasta.Value).ToList();
+
+        ListaCustomers = resultado.AsQueryable();
+    }
+
+    private async Task Restablecer()
+    {
+        Desde = null;
+        Hasta = null;
+        ValorFiltro = string.Empty;
+        Filtros = string.Empty;
+        await Buscar();
+    }
+}

@@ -1,70 +1,136 @@
 ﻿@page "/Orders"
+@attribute [Authorize(Roles = "Admin, Customer, SalesManager")]
 @rendermode InteractiveServer
 @inject SalesOrderHeaderService salesOrderHeaderService
 @inject NavigationManager navigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject ToastService toastService
+
 <PageTitle>Orders</PageTitle>
-<div class="container">
-    @* Boton de volver *@
-    <span class="btn btn-outline-primary bi bi-arrow-left mb-2" @onclick="GoToSale"> Volver</span>
 
-    <div class="card shadow-lg">
-        @*Header*@
-        <div class="card-header">
-            <h3 class="card-title">Orders</h3>
+<div class="orders-container">
+    <div class="orders-header">
+        <div>
+            <h3>Mis órdenes</h3>
+            <span>Historial de compras realizadas</span>
         </div>
-        <div class="card-body">
-            @foreach (var s in SalesOrderHeadersList)
-            {
-                <div class="card order-card shadow border-1 mb-3 bg-light-subtle border-secondary-subtle">
+        <button class="btn btn-outline bi bi-arrow-left" @onclick="GoToSale"> Seguir comprando</button>
+    </div>
 
-                    <div class="card-body">
-
-                        <!-- Top -->
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">
-                                @(s.ShipDate?.ToString("dd MMM yyyy") ?? "Sin fecha")
-                            </small>
-
-                            <span class="badge @(s.Status == 1 ? "bg-warning text-dark" : "bg-danger")">
-                                @(s.Status == 1 ? "En proceso" : "Cancelado")
-                            </span>
-                        </div>
-
-                        <!-- Info -->
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-semibold">Orden #@s.SalesOrderId</div>
-                                <small class="text-muted">Total</small>
-                            </div>
-
-                            <div class="fw-bold fs-5">
-                                RD$ @s.TotalDue
-                            </div>
-                        </div>
-
-                        <!-- Action -->
-                        <div class="mt-3 text-end">
-                            <button class="btn btn-sm btn-outline-primary bi bi-file-text" @onclick="() => GoToOrderReview(s.SalesOrderId)">
-                                Ver detalles
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            }
+    <div class="orders-summary">
+        <div class="summary-card">
+            <span>Total de órdenes</span>
+            <h4>@SalesOrderHeadersList.Count</h4>
+        </div>
+        <div class="summary-card">
+            <span>En proceso</span>
+            <h4>@SalesOrderHeadersList.Count(o => o.Status == 1)</h4>
+        </div>
+        <div class="summary-card">
+            <span>Total gastado</span>
+            <h4>RD$ @SalesOrderHeadersList.Sum(o => o.TotalDue).ToString("N2")</h4>
         </div>
     </div>
+
+    <div class="orders-list" style="max-height: 600px; overflow-y: auto; padding-right: 5px;">
+        <Virtualize Items="@SalesOrderHeadersList" Context="s">
+            <div class="order-card" @onclick="() => GoToOrderReview(s.SalesOrderId)">
+                <div class="order-card-body">
+                    <div class="order-top">
+                        <div>
+                            <span class="order-id">Orden #@s.SalesOrderId</span>
+                            <div class="order-date">
+                                @(s.OrderDate.ToString("dd MMM yyyy") ?? "Sin fecha")
+                            </div>
+                        </div>
+                        <span class="order-status @(s.Status == 1 ? "status-processing" : s.Status == 2 ? "status-processing" : s.Status == 3 ? "status-completed" : "status-cancelled")">
+                            @(s.Status == 1 ? "En proceso" : s.Status == 2 ? "Enviando" : s.Status == 3 ? "Completada" : "Cancelada")
+                        </span>
+                    </div>
+                    <div class="order-total">
+                        RD$ @s.TotalDue.ToString("N2")
+                    </div>
+                    <div class="order-actions d-flex gap-2">
+                        @if (s.Status != 4)
+                        {
+                            <button class="btn btn-sm btn-outline-danger" @onclick:stopPropagation="true" @onclick="() => ChangeCancelOrder(s)"> Cancelar</button>
+                        }
+                        <button class="btn btn-sm btn-outline"> Ver detalles</button>
+                    </div>
+                </div>
+            </div>
+        </Virtualize>
+        
+        @if (!SalesOrderHeadersList.Any())
+        {
+            <div class="text-center p-4 text-muted">
+                <i class="bi bi-box-seam fs-1 mb-2 d-block"></i>
+                <p>No tienes órdenes registradas.</p>
+            </div>
+        }
+    </div>
 </div>
+
 @code {
     private List<SalesOrderHeader> SalesOrderHeadersList = new List<SalesOrderHeader>();
+    private ClaimsPrincipal? User { get; set; }
+    private bool IsAuthenticated { get; set; }
+    private string? UserEmail { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        SalesOrderHeadersList = await salesOrderHeaderService.GetList(s => true);
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        User = authState.User;
+        IsAuthenticated = User.Identity?.IsAuthenticated ?? false;
+        if (IsAuthenticated)
+        {
+            UserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+        }
+        var ordenes = await salesOrderHeaderService.GetList(s => s.Customer.Person.EmailAddresses.Any(e => e.EmailAddress1 == UserEmail));
+        SalesOrderHeadersList = ordenes.OrderByDescending(o => o.SalesOrderId).ToList();
+        await RefreshStatus();
     }
 
     private void GoToSale() => navigationManager.NavigateTo("/Sales");
 
-    private void GoToOrderReview(int saleId) => navigationManager.NavigateTo($"Order/Review/{saleId}");
+    private async Task RefreshStatus()
+    {
+        foreach (var s in SalesOrderHeadersList)
+        {
+            if (s.ShipDate == null) continue;
+            bool modificado = false;
+            if (DateTime.Today == s.ShipDate.Value.Date && s.Status != 2)
+            {
+                s.Status = 2;
+                modificado = true;
+            }
+            else if (DateTime.Today > s.ShipDate.Value.Date.AddDays(5) && s.Status != 3)
+            {
+                s.Status = 3;
+                modificado = true;
+            }
+            if (modificado)
+            {
+                await salesOrderHeaderService.Guardar(s);
+            }
+        }
+        StateHasChanged();
+    }
 
+    private async Task ChangeCancelOrder(SalesOrderHeader sale)
+    {
+        sale.Status = 4;
+        try
+        {
+            await salesOrderHeaderService.Guardar(sale);
+            toastService.ShowSuccess("Orden cancelada");
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError("La orden no pudo ser cancelada");
+        }
+        StateHasChanged();
+    }
+
+    private void GoToOrderReview(int saleId) => navigationManager.NavigateTo($"Order/Review/{saleId}");
 }

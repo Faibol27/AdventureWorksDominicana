@@ -1,54 +1,100 @@
 ﻿@page "/ProductDescription/Create"
-@rendermode InteractiveServer
-@inject ProductDescriptionService productDescriptionService
-@inject ToastService toastService
-@inject NavigationManager navigationManager
+@attribute [Authorize(Roles = "Admin, ProductionManager")]
 
-<PageTitle>ProductDescription Create</PageTitle>
-<EditForm Model="@ProductDescription" OnValidSubmit="Guardar">
-    <DataAnnotationsValidator />
-    <div class="container">
-        <div class="card shadow-lg">
-            @*Header*@
-            <div class="card-header d-flex justify-content-center bg-info">
-                <h5 class="card-title text-light">Creaci&oacute;n de Descripci&oacute;n de Producto</h5>
-            </div>
-        
-            <div class="card-body">
-                <div>
-                    <label class="form-label text-bg-info text-white">Descripci&oacute;n</label>
-                    <InputText class="form-control" @bind-Value="ProductDescription.Description" />
-                    <ValidationMessage For="() => ProductDescription.Description" />
-                </div>
-            </div>
-            <div class="card-footer d-flex justify-content-center gap-2">
-                <a href="ProductDescription/Index" class="btn btn-outline-secondary d-flex gap-1">
-                    <i class="bi bi-arrow-left"></i>
-                    <span>Volver</span>
-                </a>
-                <button class="btn btn-outline-primary bi bi-plus-square-fill">Guardar</button>
-            </div>
+
+@inject ProductDescriptionService productDescriptionService;
+@inject ToastService toastService;
+@inject NavigationManager navigationManager;
+@rendermode InteractiveServer
+
+<div class="product-description-create-container">
+
+    <!-- HEADER -->
+    <div class="product-description-create-header">
+        <div>
+            <h3>Nueva Descripción</h3>
+            <span>Registro de contenido comercial para productos</span>
         </div>
     </div>
-</EditForm>
+
+    <!-- FORM -->
+    <div class="product-description-create-form">
+        <EditForm Model="ProductDesc" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-lg">
+                <div class="card-body">
+
+                    <!-- SECCIÓN -->
+                    <h5 class="section-title">
+                        <i class="bi bi-file-text"></i> Contenido Comercial
+                    </h5>
+
+                    <!-- DESCRIPCIÓN -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Párrafo de Descripción</strong>
+                        </label>
+
+                        <textarea class="form-control"
+                                  rows="5"
+                                  maxlength="400"
+                                  @bind="ProductDesc.Description"
+                                      placeholder="Ej: Bicicleta de alto rendimiento diseñada para recorridos de montaña extremo...">
+                        </textarea>
+
+                            <ValidationMessage For="(() => ProductDesc.Description)" />
+
+                            <small class="text-muted">
+                                Evita mencionar colores o tamaños específicos, redacta pensando en la línea general del modelo.
+                            </small>
+                        </div>
+
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div class="card-footer text-center">
+                        <a class="btn btn-secondary bi bi-arrow-left" href="/ProductDescription/Index">
+                            Volver
+                        </a>
+
+                        <button class="btn btn-primary bi bi-floppy" type="submit">
+                            Guardar
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+
+    </div>
 
 @code {
-    private ProductDescription ProductDescription = new ProductDescription();
-    private PaginationState pages = new PaginationState { ItemsPerPage = 5 };
+    public ProductDescription ProductDesc { get; set; } = new ProductDescription();
 
-    private async Task Guardar()
+    public async Task Guardar()
     {
-        var existeDuplicado = await productDescriptionService.GetList(d => d.Description.ToLower().Trim() == ProductDescription.Description.ToLower().Trim() && d.ProductDescriptionId != ProductDescription.ProductDescriptionId);
-        if (existeDuplicado.Any())
+        if (string.IsNullOrWhiteSpace(ProductDesc.Description))
         {
-            toastService.ShowWarning("Descripción ya existe.");
+            toastService.ShowWarning("La descripción no puede estar vacía.");
             return;
         }
-        var creado = await productDescriptionService.Guardar(ProductDescription);
-        if (creado)
+
+        var existeDuplicado = await productDescriptionService.GetList(d => d.Description.ToLower().Trim() == ProductDesc.Description.ToLower().Trim());
+        if (existeDuplicado.Any())
         {
-            toastService.ShowSuccess("Descripción guardada correctamente.");
-            navigationManager.NavigateTo("ProductDescription/Index");
+            toastService.ShowWarning("Esta descripción exacta ya existe en el sistema.");
+            return;
+        }
+
+        bool guardado = await productDescriptionService.Guardar(ProductDesc);
+        if (guardado)
+        {
+            toastService.ShowSuccess("Descripción registrada correctamente en el banco de textos.");
+            navigationManager.NavigateTo("/ProductDescription/Index");
+        }
+        else
+        {
+            toastService.ShowError("Ha ocurrido un error inesperado al guardar.");
         }
     }
 }

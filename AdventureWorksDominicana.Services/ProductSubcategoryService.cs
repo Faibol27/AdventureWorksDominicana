@@ -1,4 +1,4 @@
-﻿using AdventureWorksDominicana.Data.Context;
+using AdventureWorksDominicana.Data.Context;
 using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +17,15 @@ public class ProductSubcategoryService(IDbContextFactory<Contexto> DbContextFact
     public async Task<bool> Eliminar(int id)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-        var filasAfectadas = await contexto.ProductSubcategories.Where(s => s.ProductSubcategoryId == id).ExecuteDeleteAsync();
-        return filasAfectadas > 0;
+        try
+        {
+            return await contexto.ProductSubcategories.Where(s => s.ProductSubcategoryId == id).ExecuteDeleteAsync() > 0;
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new ProductDependentDataException("No se puede eliminar la subcategoría porque tiene productos asociados o activos.", ex);
+        }
+        catch { return false; }
     }
     public async Task<List<ProductSubcategory>> GetList(Expression<Func<ProductSubcategory, bool>> criterio)
     {

@@ -1,4 +1,6 @@
 ﻿@page "/Department/Index"
+@attribute [Authorize(Roles = "Admin,HRManager")]
+
 @rendermode InteractiveServer
 @inject DepartmentService departmentService
 
@@ -17,31 +19,36 @@
         <div class="card-body">
             @*Filters*@
             <div class="row">
-                <div class="col-6">
-                    <label class="form-label">Desde</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Desde:</label>
                     <InputDate class="form-control" @bind-Value="StartDate"/>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">Hasta</label>
-                    <InputDate class="form-control" @bind-Value="EndDate"/>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Hasta:</label>
+                    <InputDate class="form-control " @bind-Value="EndDate"/>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-6">
-                    <label class="form-label">Seleccione una opci&oacute;n</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Filtros:</label>
                     <InputSelect class="form-select" @bind-Value="Filtro">
-                        <option value="">Seleccione una opci&oacute;n</option>
+                        <option value="" disabled selected>Seleccione una opci&oacute;n</option>
                         <option value="Name">Nombre</option>
                         <option value="GroupName">Nombre del Grupo</option>
                     </InputSelect>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">Buscar</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Buscar:</label>
                     <div class="input-group">
-                        <InputText class="form-control" placeholder="Buscar..." @bind-Value="ValorFiltro"/>
+                        <InputText class="form-control" placeholder="Buscar..." @bind-Value="ValorFiltro" />
                         <i class="btn btn-outline-primary bi bi-search" @onclick="Buscar"></i>
+
+                        <button class="btn btn-outline-primary" type="button" @onclick="Restablecer" title="Limpiar Filtros">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
                     </div>
                 </div>
+            </div>
+            <div class="row">
+              
             </div>
             @*Table*@
             <div class="table-responsive mt-3">
@@ -85,5 +92,14 @@
                 criterio = criterio.And(d => d.GroupName.Contains(ValorFiltro)); 
         }
         DepartmentsList = await departmentService.GetList(criterio);
+    }
+
+    private async Task Restablecer()
+    {
+        StartDate = DateTime.Today.Date;
+        EndDate = DateTime.Today.Date.AddDays(1);
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        await Buscar();
     }
 }

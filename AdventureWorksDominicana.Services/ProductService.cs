@@ -1,4 +1,4 @@
-﻿using AdventureWorksDominicana.Data.Context;
+using AdventureWorksDominicana.Data.Context;
 using AdventureWorksDominicana.Data.Models;
 using Aplicada1.Core;
 using Microsoft.EntityFrameworkCore;
@@ -22,14 +22,45 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
     public async Task<List<Product>> GetList(Expression<Func<Product, bool>> criterio)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-        return await contexto.Products.AsNoTracking()
+        return await contexto.Products
             .Include(p => p.ProductSubcategory).ThenInclude(p => p.ProductCategory)
             .Include(p => p.ProductModel).ThenInclude(d => d.ProductModelProductDescriptionCultures).ThenInclude(d => d.ProductDescription)
-            .Include(p => p.ProductModel).ThenInclude(d => d.ProductModelProductDescriptionCultures).ThenInclude(c => c.Culture)
             .Include(p => p.SizeUnitMeasureCodeNavigation)
             .Include(p => p.WeightUnitMeasureCodeNavigation)
+            .Include(p => p.ProductProductPhotos).ThenInclude(ppp => ppp.ProductPhoto)
             .Where(criterio)
             .ToListAsync();
+    }
+    public async Task<(List<Product> Items, int Total)> GetList(Expression<Func<Product, bool>> criterio, int pageIndex, int pageSize)
+    {
+        await using var contexto = await DbContextFactory.CreateDbContextAsync();
+        var query = contexto.Products
+            .AsNoTracking()
+            .Include(p => p.ProductInventories)
+            .Include(p => p.ProductSubcategory).ThenInclude(p => p.ProductCategory)
+            .Include(p => p.ProductModel).ThenInclude(d => d.ProductModelProductDescriptionCultures).ThenInclude(d => d.ProductDescription)
+            .Include(p => p.ProductProductPhotos).ThenInclude(ppp => ppp.ProductPhoto)
+            .Where(criterio);
+
+        int totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+    public async Task<List<Product>> GetListIndex(Expression<Func<Product, bool>> criterio)
+    {
+        await using var contexto = await DbContextFactory.CreateDbContextAsync();
+        return await contexto.Products.AsNoTracking().Include(p => p.ProductSubcategory).Where(criterio).ToListAsync();
+    }
+
+    public async Task<List<ProductCategory>> GetCategories()
+    {
+        await using var contexto = await DbContextFactory.CreateDbContextAsync();
+        return await contexto.ProductCategories.OrderBy(x => x.Name).ToListAsync();
     }
 
     public async Task<bool> Existe(int id)
@@ -49,7 +80,6 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
     public async Task<bool> Insertar(Product product)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
-
         product.Rowguid = Guid.NewGuid();
         product.ModifiedDate = DateTime.Now;
 
@@ -60,14 +90,36 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
     public async Task<bool> Modificar(Product product)
     {
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
+        
+        var productoOriginal = await contexto.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == product.ProductId);
+
+        if (productoOriginal == null) return false;
 
         product.ModifiedDate = DateTime.Now;
-        product.ProductSubcategory = null;
-        product.ProductModel = null;
-        product.SizeUnitMeasureCodeNavigation = null;
-        product.WeightUnitMeasureCodeNavigation = null;
 
-        contexto.Products.Update(product);
+        if (productoOriginal.ListPrice != product.ListPrice)
+        {
+            contexto.ProductListPriceHistories.Add(new ProductListPriceHistory
+            {
+                ProductId = product.ProductId,
+                StartDate = DateTime.Now,
+                ListPrice = product.ListPrice,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        if (productoOriginal.StandardCost != product.StandardCost)
+        {
+            contexto.ProductCostHistories.Add(new ProductCostHistory
+            {
+                ProductId = product.ProductId,
+                StartDate = DateTime.Now,
+                StandardCost = product.StandardCost,
+                ModifiedDate = DateTime.Now
+            });
+        }
+
+        contexto.Entry(product).State = EntityState.Modified;
         return await contexto.SaveChangesAsync() > 0;
     }
 
@@ -76,16 +128,43 @@ public class ProductService(IDbContextFactory<Contexto> DbContextFactory) : ISer
         await using var contexto = await DbContextFactory.CreateDbContextAsync();
         try
         {
-            var filas = await contexto.Products.Where(p => p.ProductId == id).ExecuteDeleteAsync();
-            return filas > 0;
+            return await contexto.Products.Where(p => p.ProductId == id).ExecuteDeleteAsync() > 0;
         }
-        catch (DbUpdateException)
+        catch (Exception) 
         {
-            return false;
-        }
-        catch
-        {
+            var producto = await contexto.Products.FindAsync(id);
+            if (producto != null)
+            {
+                producto.SellEndDate = DateTime.Now;
+                contexto.Products.Update(producto);
+                await contexto.SaveChangesAsync();
+                return true; 
+            }
             return false;
         }
     }
+
+    public async Task<List<Product>> GetTopFeaturedProducts(int cantidad = 4)
+    {
+        await using var contexto = await DbContextFactory.CreateDbContextAsync();
+
+        return await contexto.Products
+            .AsNoTracking()
+            .Where(p => p.SellStartDate <= DateTime.Now)
+            .OrderByDescending(p => p.ListPrice)
+            .Take(cantidad)
+            .Include(p => p.ProductSubcategory)
+                .ThenInclude(ps => ps.ProductCategory)
+            .Include(p => p.ProductProductPhotos)
+                .ThenInclude(ppp => ppp.ProductPhoto)
+            .ToListAsync();
+    }
+
+}
+
+public class ProductDependentDataException : Exception
+{
+    public ProductDependentDataException() : base() { }
+    public ProductDependentDataException(string message) : base(message) { }
+    public ProductDependentDataException(string message, Exception innerException) : base(message, innerException) { }
 }

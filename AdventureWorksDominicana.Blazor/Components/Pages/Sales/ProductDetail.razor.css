@@ -1,0 +1,132 @@
+﻿.product-container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* HEADER */
+.product-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+    .product-header h3 {
+        margin: 0;
+        color: #01398C;
+    }
+
+    .product-header span {
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+.btn-back {
+    border: 1px solid #466EDB;
+    background: white;
+    color: #466EDB;
+    padding: 6px 12px;
+    border-radius: 8px;
+}
+
+    .btn-back:hover {
+        background: #466EDB;
+        color: white;
+    }
+
+/* LAYOUT */
+.product-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+/* IMAGE */
+.product-image {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    position: relative;
+}
+
+    .product-image img {
+        max-width: 200px;
+    }
+
+.product-color {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #01398C;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+/* INFO */
+.product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.product-category {
+    background: #e9efff;
+    color: #01398C;
+    padding: 3px 10px;
+    border-radius: 8px;
+    width: fit-content;
+    font-size: 12px;
+}
+
+.product-info h2 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.product-description {
+    color: #555;
+    font-size: 14px;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #01398C;
+}
+
+/* BUTTON */
+.product-actions {
+    margin-top: 10px;
+}
+
+.btn-add {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #466EDB, #01398C);
+    color: white;
+    padding: 10px;
+    font-weight: 500;
+}
+
+    .btn-add:hover {
+        opacity: 0.9;
+    }
+
+/* EMPTY */
+.product-empty {
+    text-align: center;
+    padding: 40px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .product-content {
+        grid-template-columns: 1fr;
+    }
+}

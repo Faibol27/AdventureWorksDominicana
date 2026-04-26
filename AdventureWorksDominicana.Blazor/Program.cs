@@ -82,6 +82,7 @@ builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<SalesPersonService>();
 builder.Services.AddScoped<AddressService>();
 builder.Services.AddScoped<ShipMethodService>();
+builder.Services.AddScoped<ShippingService>();
 builder.Services.AddScoped<CurrencyRateService>();
 builder.Services.AddScoped<SpecialOfferProductService>();
 builder.Services.AddScoped<ProductDescriptionService>();
@@ -92,8 +93,25 @@ builder.Services.AddScoped<UnitMeasureService>();
 builder.Services.AddScoped<ProductSubcategoryService>();
 builder.Services.AddScoped<StateProvinceService>();
 builder.Services.AddScoped<CultureService>();
+builder.Services.AddScoped<StoreService>();
 builder.Services.AddScoped<LocationService>();
+builder.Services.AddScoped<TransactionHistoryService>();
+builder.Services.AddScoped<PurchaseOrderService>();
+builder.Services.AddScoped<ProductInventoryService>();
+builder.Services.AddScoped<ProductPhotoService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ProductVendorService>();
+builder.Services.AddScoped<PayrollService>();
+builder.Services.AddScoped<PayrollParameterService>();
+builder.Services.AddScoped<EmployeePayHistoryService>();
+builder.Services.AddScoped<EmployeeDepartmentService>();
+builder.Services.AddScoped<SpecialOfferService>();
+builder.Services.AddScoped<UnitMeasureService>();
 
+
+
+builder.Services.AddScoped<BusinessEntityAddressService>();
+builder.Services.AddScoped<PersonCreditCardService>();
 var app = builder.Build();
 
 
@@ -106,7 +124,7 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 app.UseAntiforgery();
-app.MapStaticAssets();
+app.MapStaticAssets().AllowAnonymous();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
